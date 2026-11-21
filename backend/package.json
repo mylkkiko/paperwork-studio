@@ -1,0 +1,20 @@
+{
+  "name": "paperwork-studio-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paperwork Studio REST API (Phase 0: seed template tooling only)",
+  "scripts": {
+    "seed:templates": "tsx scripts/generate-seed-templates.ts",
+    "inspect:docx": "tsx scripts/inspect-docx.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "docx": "^9.16.0",
+    "mammoth": "^1.13.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
