@@ -1,0 +1,71 @@
+{
+  "signature": {
+    "unsigned": "☐  Ստորագրություն՝ ____________",
+    "signedOnline": "☑  Հաստատված է առցանց՝ {date}",
+    "signedPaper": "☑  Ստորագրված է թղթային տարբերակով՝ {date}"
+  },
+  "summary": {
+    "preamble": "Նախաբան",
+    "clause": "Կետ {number}",
+    "added": "{clause}-ն ավելացվել է",
+    "removed": "{clause}-ը հանվել է",
+    "moved": "{clause}-ը տեղափոխվել է ({from} → {to}), բովանդակությունը չի փոխվել",
+    "movedChanged": "{clause}-ը տեղափոխվել է ({from} → {to}) և խմբագրվել է",
+    "numberChanged": "{clause}․ թիվը փոխվել է՝ {old} → {new}",
+    "termChanged": "{clause}․ ժամկետը փոխվել է՝ {old} → {new} {unit}",
+    "paymentTermChanged": "{clause}․ վճարման ժամկետը փոխվել է՝ {old} → {new} {unit}",
+    "amountChanged": "{clause}․ գումարը փոխվել է՝ {old} → {new}",
+    "dateChanged": "{clause}․ ամսաթիվը փոխվել է՝ {old} → {new}",
+    "textChanged": "{clause}-ի ձևակերպումը փոխվել է",
+    "noChanges": "Փոփոխություններ չկան",
+    "unit": {
+      "day": "օր",
+      "month": "ամիս",
+      "year": "տարի",
+      "hour": "ժամ"
+    }
+  },
+  "email": {
+    "signRequest": {
+      "subject": "Ստորագրման համար՝ {title} № {number}",
+      "body": "Հարգելի {name},\n\nԽնդրում ենք ծանոթանալ «{title}» փաստաթղթին (№ {number}) և հաստատել այն հետևյալ հղումով՝\n{link}\n\nՀղումը գործում է մինչև {expires}։\n\nՀարգանքով՝\n{academy}"
+    },
+    "reminder": {
+      "subject": "Հիշեցում․ {title} № {number} փաստաթուղթը սպասում է Ձեր հաստատմանը",
+      "body": "Հարգելի {name},\n\nՀիշեցնում ենք, որ «{title}» փաստաթուղթը (№ {number}) դեռ հաստատված չէ։\nՀաստատելու համար անցեք հղումով՝\n{link}\n\nՀղումը գործում է մինչև {expires}։\n\nՀարգանքով՝\n{academy}"
+    },
+    "newVersion": {
+      "subject": "Թարմացված փաստաթուղթ՝ {title} № {number}",
+      "body": "Հարգելի {name},\n\n«{title}» փաստաթուղթը թարմացվել է։ Փոփոխությունները՝\n{summary}\n\nԽնդրում ենք ծանոթանալ նոր տարբերակին (№ {number}) և հաստատել այն՝\n{link}\n\nՀղումը գործում է մինչև {expires}։\n\nՀարգանքով՝\n{academy}"
+    }
+  },
+  "export": {
+    "recipient": "Ստացող",
+    "email": "Էլ. փոստ",
+    "document": "Փաստաթուղթ",
+    "template": "Ձևանմուշ",
+    "version": "Տարբերակ",
+    "status": "Կարգավիճակ",
+    "method": "Եղանակ",
+    "sentAt": "Ուղարկվել է",
+    "signedAt": "Ստորագրվել է",
+    "reminders": "Հիշեցումներ"
+  },
+  "status": {
+    "created": "Ստեղծված",
+    "sent": "Ուղարկված",
+    "viewed": "Դիտված",
+    "signed": "Ստորագրված",
+    "declined": "Մերժված",
+    "expired": "Ժամկետանց"
+  },
+  "method": {
+    "online": "Առցանց",
+    "paper": "Թղթային"
+  },
+  "warnings": {
+    "UNKNOWN_FIELD": "Անհայտ դաշտ՝ {field}",
+    "CLAUSES_NOT_DETECTED": "Կետերը չեն հայտնաբերվել․ համարակալումը փոխարկեք սովորական տեքստի",
+    "MISSING_SIGNATURE_FIELD": "Ձևանմուշում բացակայում է {{signature.checkbox}} դաշտը"
+  }
+}

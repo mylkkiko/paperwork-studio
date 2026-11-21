@@ -1,0 +1,261 @@
+// Paperwork Studio data model. See docs/PLAN.md §5 of the build spec.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  editor
+  coordinator
+}
+
+enum TemplateCategory {
+  student_agreement
+  termination_act
+  enrollment_letter
+  vacation_order
+  partner_invoice
+}
+
+enum VersionStatus {
+  draft
+  published
+  archived
+}
+
+enum FieldSource {
+  core
+  manual
+  system // filled by the app itself: document.number, document.date, signature.checkbox
+}
+
+enum FieldType {
+  text
+  date
+  money
+  number
+}
+
+enum RecipientType {
+  student
+  staff
+  partner
+}
+
+enum BatchStatus {
+  queued
+  running
+  completed
+  failed
+}
+
+enum DocumentStatus {
+  created
+  sent
+  viewed
+  signed
+  declined
+  expired
+}
+
+enum SignatureMethod {
+  online
+  paper
+}
+
+enum ReminderType {
+  auto
+  manual
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model Template {
+  id          String            @id @default(uuid())
+  title       String
+  category    TemplateCategory
+  createdById String
+  createdAt   DateTime          @default(now())
+  versions    TemplateVersion[]
+
+  @@index([category])
+}
+
+model TemplateVersion {
+  id            String            @id @default(uuid())
+  templateId    String
+  template      Template          @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  status        VersionStatus     @default(draft)
+  filePath      String
+  /// Merge-field keys found in the .docx: string[]
+  fields        Json
+  /// Unknown fields / structure warnings found on upload: {code, field?, message}[]
+  warnings      Json              @default("[]")
+  /// Clauses split from the text: {key, number, title, text}[]
+  clauses       Json
+  /// Comparison with the version that was published when this draft was created (null for v1)
+  comparison    Json?
+  comparedToId  String?
+  changeSummary String?
+  createdById   String
+  createdAt     DateTime          @default(now())
+  publishedAt   DateTime?
+  documents     Document[]
+  batches       GenerationBatch[]
+
+  @@unique([templateId, versionNumber])
+  @@index([templateId])
+  @@index([status])
+}
+
+model MergeField {
+  id       String      @id @default(uuid())
+  key      String      @unique
+  label    String
+  source   FieldSource
+  type     FieldType   @default(text)
+  /// Optional format hint, e.g. "long" for dates
+  format   String?
+  required Boolean     @default(true)
+}
+
+model GenerationBatch {
+  id                String          @id @default(uuid())
+  templateVersionId String
+  templateVersion   TemplateVersion @relation(fields: [templateVersionId], references: [id])
+  recipientType     RecipientType
+  groupId           String?
+  groupName         String?
+  /// Shared (pack-level) manual values: { "contract.amount": 150000, ... }
+  commonValues      Json
+  /// Per-recipient overrides and exclusions from the precheck step
+  overrides         Json            @default("{}")
+  /// Already-formatted values per recipient (S-6: manual values reused from the signed older document)
+  presetValues      Json            @default("{}")
+  excludedIds       Json            @default("[]")
+  recipientIds      Json            @default("[]")
+  status            BatchStatus     @default(queued)
+  progress          Int             @default(0)
+  total             Int             @default(0)
+  error             String?
+  /// S-6: when set, every generated document is emailed automatically when the batch completes
+  sendOnComplete    String?
+  zipPath           String?
+  mergedPdfPath     String?
+  createdById       String
+  createdAt         DateTime        @default(now())
+  finishedAt        DateTime?
+  documents         Document[]
+
+  @@index([templateVersionId])
+  @@index([groupId])
+}
+
+model Document {
+  id                String             @id @default(uuid())
+  number            String             @unique
+  batchId           String
+  batch             GenerationBatch    @relation(fields: [batchId], references: [id])
+  templateVersionId String
+  templateVersion   TemplateVersion    @relation(fields: [templateVersionId], references: [id])
+  recipientType     RecipientType
+  recipientId       String
+  recipientName     String
+  recipientEmail    String?
+  groupId           String?
+  /// Every value used to fill the template (flat map key -> formatted string). Never shown in lists.
+  dataSnapshot      Json
+  pdfPath           String
+  docxPath          String
+  signedPdfPath     String?
+  status            DocumentStatus     @default(created)
+  sentAt            DateTime?
+  viewedAt          DateTime?
+  declinedAt        DateTime?
+  declineReason     String?
+  createdAt         DateTime           @default(now())
+  signatureRequests SignatureRequest[]
+  signatures        Signature[]
+  reminders         Reminder[]
+
+  @@index([batchId])
+  @@index([templateVersionId])
+  @@index([status])
+  @@index([groupId])
+  @@index([recipientId])
+}
+
+model SignatureRequest {
+  id         String    @id @default(uuid())
+  documentId String
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  /// sha256 hex of the raw token; the raw token only ever exists in the email link
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  /// Set when a newer link replaces this one, or after the document is signed/declined
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([documentId])
+}
+
+model Signature {
+  id           String          @id @default(uuid())
+  documentId   String
+  document     Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  method       SignatureMethod
+  signerName   String
+  signedAt     DateTime
+  ip           String?
+  userAgent    String?
+  scanPath     String?
+  recordedById String?
+
+  @@index([documentId])
+}
+
+model Reminder {
+  id          String       @id @default(uuid())
+  documentId  String
+  document    Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  type        ReminderType
+  /// For auto reminders: which schedule day this was (2, 5, ...). Prevents double sending.
+  scheduleDay Int?
+  sentAt      DateTime     @default(now())
+
+  @@index([documentId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  meta       Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+/// One row per year; incremented in a transaction to produce PS-YYYY-000123.
+model DocumentCounter {
+  year  Int @id
+  value Int @default(0)
+}

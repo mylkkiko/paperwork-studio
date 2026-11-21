@@ -1,0 +1,71 @@
+{
+  "signature": {
+    "unsigned": "☐  Signature: ____________",
+    "signedOnline": "☑  Confirmed online: {date}",
+    "signedPaper": "☑  Signed on paper: {date}"
+  },
+  "summary": {
+    "preamble": "Preamble",
+    "clause": "Clause {number}",
+    "added": "{clause} added",
+    "removed": "{clause} removed",
+    "moved": "{clause} moved ({from} → {to}), content unchanged",
+    "movedChanged": "{clause} moved ({from} → {to}) and edited",
+    "numberChanged": "{clause}: number changed from {old} to {new}",
+    "termChanged": "{clause}: term changed from {old} to {new} {unit}",
+    "paymentTermChanged": "{clause}: payment term changed from {old} to {new} {unit}",
+    "amountChanged": "{clause}: amount changed from {old} to {new}",
+    "dateChanged": "{clause}: date changed from {old} to {new}",
+    "textChanged": "{clause}: wording changed",
+    "noChanges": "No changes",
+    "unit": {
+      "day": "days",
+      "month": "months",
+      "year": "years",
+      "hour": "hours"
+    }
+  },
+  "email": {
+    "signRequest": {
+      "subject": "For signature: {title} No. {number}",
+      "body": "Dear {name},\n\nPlease review the document \"{title}\" (No. {number}) and confirm it using this link:\n{link}\n\nThe link is valid until {expires}.\n\nKind regards,\n{academy}"
+    },
+    "reminder": {
+      "subject": "Reminder: document {title} No. {number} is waiting for your confirmation",
+      "body": "Dear {name},\n\nThis is a reminder that the document \"{title}\" (No. {number}) has not been confirmed yet.\nPlease use this link:\n{link}\n\nThe link is valid until {expires}.\n\nKind regards,\n{academy}"
+    },
+    "newVersion": {
+      "subject": "Updated document: {title} No. {number}",
+      "body": "Dear {name},\n\nThe document \"{title}\" has been updated. Changes:\n{summary}\n\nPlease review the new version (No. {number}) and confirm it:\n{link}\n\nThe link is valid until {expires}.\n\nKind regards,\n{academy}"
+    }
+  },
+  "export": {
+    "recipient": "Recipient",
+    "email": "Email",
+    "document": "Document",
+    "template": "Template",
+    "version": "Version",
+    "status": "Status",
+    "method": "Method",
+    "sentAt": "Sent at",
+    "signedAt": "Signed at",
+    "reminders": "Reminders"
+  },
+  "status": {
+    "created": "Created",
+    "sent": "Sent",
+    "viewed": "Viewed",
+    "signed": "Signed",
+    "declined": "Declined",
+    "expired": "Expired"
+  },
+  "method": {
+    "online": "Online",
+    "paper": "Paper"
+  },
+  "warnings": {
+    "UNKNOWN_FIELD": "Unknown field: {field}",
+    "CLAUSES_NOT_DETECTED": "Clauses not detected — convert numbering to plain text",
+    "MISSING_SIGNATURE_FIELD": "The template has no {{signature.checkbox}} field"
+  }
+}

@@ -1,0 +1,68 @@
+# One command: `docker compose up --build` starts a seeded demo.
+# Host ports avoid the defaults (5432, 6379, 3000) because they are often taken on dev machines.
+name: paperwork-studio
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: paperwork
+      POSTGRES_PASSWORD: paperwork
+      POSTGRES_DB: paperwork
+    ports: ["5433:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperwork"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  # Stock Gotenberg 8.40.0 + a fontconfig fallback order for Armenian (digits, ֏, ☐ ☑). See docker/gotenberg.
+  gotenberg:
+    build: ./docker/gotenberg
+    image: paperwork-studio-gotenberg:8.40.0
+    ports: ["3010:3000"]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025" # web UI
+      - "1025:1025" # SMTP
+
+  backend:
+    build: ./backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      gotenberg: { condition: service_started }
+      mailpit: { condition: service_started }
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://paperwork:paperwork@postgres:5432/paperwork?schema=public
+      REDIS_URL: redis://redis:6379
+      GOTENBERG_URL: http://gotenberg:3000
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      JWT_SECRET: ${JWT_SECRET:-demo-only-secret-change-me-please}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3100}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3100}
+      STORAGE_DIR: /app/storage
+      # Seed demo data on first start (idempotent: skipped if users already exist)
+      SEED_ON_START: "true"
+    ports: ["4000:4000"]
+    volumes:
+      - storage:/app/storage
+
+volumes:
+  pgdata:
+  storage:

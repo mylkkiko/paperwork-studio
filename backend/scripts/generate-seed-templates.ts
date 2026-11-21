@@ -27,6 +27,8 @@ type Block =
   | { kind: 'right'; text: string }
   | { kind: 'heading'; text: string }
   | { kind: 'p'; text: string }
+  /** left-aligned line (signature lines: justification would stretch or wrap them) */
+  | { kind: 'line'; text: string }
   | { kind: 'blank' };
 
 function toParagraph(b: Block): Paragraph {
@@ -43,6 +45,8 @@ function toParagraph(b: Block): Paragraph {
       return new Paragraph({ spacing: { before: 200, after: 80 }, children: [new TextRun({ text: b.text, bold: true })] });
     case 'p':
       return new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 }, children: [new TextRun(b.text)] });
+    case 'line':
+      return new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 80 }, children: [new TextRun(b.text)] });
     case 'blank':
       return new Paragraph({ children: [] });
   }
@@ -120,9 +124,10 @@ function studentAgreement(version: 1 | 2): Block[] {
     { kind: 'p', text: '7.2. Վեճերը լուծվում են բանակցությունների միջոցով, իսկ համաձայնության չգալու դեպքում՝ ՀՀ օրենսդրությամբ սահմանված կարգով։' },
 
     { kind: 'heading', text: '8. Կողմերի ստորագրությունները' },
-    { kind: 'p', text: 'Ակադեմիա՝ «{{academy.name}}», տնօրեն {{academy.director}}  ____________' },
-    { kind: 'p', text: 'Ուսանող՝ {{student.full_name}}' },
-    { kind: 'p', text: '{{signature.checkbox}}' },
+    { kind: 'line', text: 'Ակադեմիա՝ «{{academy.name}}», տնօրեն {{academy.director}}' },
+    { kind: 'line', text: 'Ստորագրություն՝ ____________' },
+    { kind: 'line', text: 'Ուսանող՝ {{student.full_name}}' },
+    { kind: 'line', text: '{{signature.checkbox}}' },
   );
   return blocks;
 }
@@ -142,9 +147,9 @@ const terminationAct: Block[] = [
   { kind: 'p', text: '4. Ուսանողին վերադարձման ենթակա գումարը կազմում է {{termination.refund_amount}}։' },
   { kind: 'p', text: '5. Կողմերը միմյանց նկատմամբ այլ ֆինանսական կամ իրավական պահանջներ չունեն։' },
   { kind: 'blank' },
-  { kind: 'p', text: 'Ակադեմիա՝ տնօրեն {{academy.director}}  ____________' },
-  { kind: 'p', text: 'Ուսանող՝ {{student.full_name}}' },
-  { kind: 'p', text: '{{signature.checkbox}}' },
+  { kind: 'line', text: 'Ակադեմիա՝ տնօրեն {{academy.director}}  ____________' },
+  { kind: 'line', text: 'Ուսանող՝ {{student.full_name}}' },
+  { kind: 'line', text: '{{signature.checkbox}}' },
 ];
 
 // A letter, intentionally without numbered clauses: the whole body becomes the "preamble" clause.
@@ -153,7 +158,7 @@ const enrollmentLetter: Block[] = [
   { kind: 'right', text: '{{document.date}}' },
   { kind: 'blank' },
   { kind: 'title', text: 'ԸՆԴՈՒՆԵԼՈՒԹՅԱՆ ԾԱՆՈՒՑՈՒՄ' },
-  { kind: 'p', text: 'Հարգելի {{student.full_name}},' },
+  { kind: 'line', text: 'Հարգելի {{student.full_name}},' },
   {
     kind: 'p',
     text: 'Ուրախ ենք տեղեկացնել, որ Դուք ընդունվել եք «{{academy.name}}»-ի «{{group.course_name}}» դասընթացին և ընդգրկվել {{group.name}} խմբում։',
@@ -162,10 +167,10 @@ const enrollmentLetter: Block[] = [
   { kind: 'p', text: 'Դասերն անցկացվում են հետևյալ հասցեով՝ {{academy.address}}։' },
   { kind: 'p', text: 'Խնդրում ենք ստորագրել սույն ծանուցումը՝ հաստատելով դրա ստացումը։' },
   { kind: 'blank' },
-  { kind: 'p', text: 'Հարգանքով՝ {{academy.director}}, տնօրեն' },
+  { kind: 'line', text: 'Հարգանքով՝ {{academy.director}}, տնօրեն' },
   { kind: 'blank' },
-  { kind: 'p', text: 'Ստացա՝ {{student.full_name}}' },
-  { kind: 'p', text: '{{signature.checkbox}}' },
+  { kind: 'line', text: 'Ստացա՝ {{student.full_name}}' },
+  { kind: 'line', text: '{{signature.checkbox}}' },
 ];
 
 async function main() {
