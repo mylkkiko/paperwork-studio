@@ -9,7 +9,8 @@ the main risks, and the assumptions made where the spec leaves room.
 
 ```
 paperwork-studio/
-  docker-compose.yml          postgres, redis, gotenberg (custom image w/ Armenian fonts), mailpit, backend, frontend
+  docker-compose.yml          postgres, redis, gotenberg (+ font fallback config), mailpit, backend, frontend
+  docker/gotenberg/           FROM gotenberg/gotenberg:8.40.0 + fonts.conf (see §7)
   README.md                   one-command start, demo credentials, URLs
   docs/PLAN.md                this file
   backend/
@@ -21,8 +22,6 @@ paperwork-studio/
 ```
 backend/
   package.json  tsconfig.json  jest.config.ts  .env.example  README.md  openapi.yaml  Dockerfile
-  docker/gotenberg/Dockerfile        FROM gotenberg/gotenberg:8 + Noto Armenian + symbol fonts
-  assets/fonts/                      Noto Sans/Serif Armenian (OFL) — used by Gotenberg image and tests
   prisma/
     schema.prisma
     migrations/
@@ -149,14 +148,13 @@ frontend/
   the current clause (e.g. signature lines belong to the last clause).
 - Merge field tags stay in the clause text (we compare templates, not filled documents).
 
-### 2.4 Comparison (V-2/V-3)
-1. **Match by number**: clauses with the same number in both versions are paired.
-2. **Match by similarity**: remaining unmatched clauses are paired greedily by highest word-level similarity
-   (Dice coefficient on word tokens) if ≥ 0.6 → reported as `changed`/`unchanged` with `renumbered: from → to`.
-3. Paired → `unchanged` if normalized text equal, else `changed` with jsdiff `diffWordsWithSpace` spans.
-   Unpaired old → `removed`, unpaired new → `added`.
-- Number-matched pairs whose similarity is very low (< 0.3) are treated as removed+added — but only if the
-  removed text found a better match elsewhere; this avoids false "changed" on heavy rewrites after renumbering.
+### 2.4 Comparison (V-2/V-3) — *revised in Phase 1*
+1. **Identical text** (any number): paired first. Required for renumbering: if 3.2 is removed and old 3.3 becomes
+   3.2, matching by number first would wrongly pair old 3.2 with new 3.2. Ties prefer the same number.
+2. **Same number**, if the texts are at least loosely similar (Dice ≥ 0.3); otherwise it's a replaced clause → removed + added.
+3. **Best similarity** (Dice on word tokens ≥ 0.6), greedy, for clauses renumbered *and* edited.
+- Paired → `unchanged` / `changed` (jsdiff `diffWordsWithSpace` spans), with `moved: true` when the number changed.
+  Unpaired old → `removed`, unpaired new → `added`. Output is in new-document order with removed clauses in place.
 
 ### 2.5 Summary (V-4/V-5/V-6)
 `SummaryGenerator` interface; `RuleBasedSummaryGenerator` emits i18n phrases:
@@ -283,7 +281,28 @@ termination act and enrollment letter v1 **published**.
 
 ---
 
-## 7. Phase overview
+## 7. Decisions made during Phase 1
+
+Confirmed by the product owner after Phase 0: all assumptions in §6, plus
+- **Auto-numbering warning**: a template with Word automatic numbering (`w:numPr`) and no typed clause numbers gets
+  the upload warning `CLAUSES_NOT_DETECTED` ("Clauses not detected — convert numbering to plain text"); the draft is saved.
+- **Renumbering test (Phase 2)**: fixture with 3.2 removed and old 3.3 → new 3.2 (same text) must be "unchanged, moved".
+- Drawn-box fallback for ☐/☑ is acceptable if fonts fail (not needed, see below).
+
+Changes vs. the plan:
+- **Fonts (R1/R2)**: the stock Gotenberg 8.40.0 image already has Noto Armenian, but fallback was wrong (emoji font for
+  digits, broken line layout around ☐/☑). Fixed with a fontconfig file (`docker/gotenberg/fonts.conf`) instead of
+  bundling fonts, plus putting ☐/☑ in their own run with `DejaVu Sans` (`docx.service.ts › isolateSymbols`).
+- **Field extraction** uses a recording parser during a dry render, not `InspectModule` (that pulls in lodash).
+  Same split-run handling, verified with a `{{stu` + `dent.full` + `_name}}` fixture.
+- **Reminder links**: tokens are stored only as hashes, so a reminder can't resend the original link. Each reminder
+  issues an additional token with the same expiry; "send" issues a fresh token and revokes older ones.
+- **S-6 resend**: a new batch per group from the current version; manual values (amount, dates) are carried over from
+  the signed document, Core Engine data is re-read; emails go out automatically when the batch completes.
+- `GenerationBatch` got `presetValues` and `sendOnComplete`; `Document` got `declinedAt`/`declineReason`;
+  `TemplateVersion` got `warnings`, `comparison`, `comparedToId`; `SignatureRequest.revokedAt`; `DocumentCounter`.
+
+## 8. Phase overview
 
 | Phase | Output |
 | --- | --- |

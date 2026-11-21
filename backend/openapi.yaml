@@ -1,0 +1,739 @@
+openapi: 3.0.3
+info:
+  title: Paperwork Studio API
+  version: 0.1.0
+  description: |
+    Templates (.docx with `{{merge.fields}}`), batch generation (PDF + DOCX), clause-by-clause version comparison,
+    online/paper signatures and reminders.
+
+    **Auth**: `POST /api/auth/login` returns a JWT; send it as `Authorization: Bearer <token>`.
+    Roles: `admin` (everything), `editor`, `coordinator`. The `/api/sign/*` routes are public and token-based.
+
+    **Errors** always look like `{ "error": { "code": "...", "message": "...", "details": ... } }`.
+servers:
+  - url: http://localhost:4000
+security:
+  - bearer: []
+
+tags:
+  - name: auth
+  - name: users
+  - name: merge-fields
+  - name: core
+  - name: templates
+  - name: batches
+  - name: documents
+  - name: signatures
+  - name: sign
+    description: Public signing by token (no login)
+  - name: audit
+
+paths:
+  /api/health:
+    get:
+      tags: [auth]
+      security: []
+      summary: Liveness check
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean } } } } } }
+
+  /api/auth/login:
+    post:
+      tags: [auth]
+      security: []
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email, password], properties: { email: { type: string, format: email }, password: { type: string } } }
+            example: { email: coordinator@academy.am, password: Coord123! }
+      responses:
+        '200':
+          description: JWT and user
+          content: { application/json: { schema: { type: object, properties: { token: { type: string }, user: { $ref: '#/components/schemas/AuthUser' } } } } }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /api/auth/me:
+    get:
+      tags: [auth]
+      summary: Current user
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { user: { $ref: '#/components/schemas/AuthUser' } } } } } }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /api/users:
+    get:
+      tags: [users]
+      summary: List users (admin)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/User' } } } } } } }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [users]
+      summary: Create user (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                role: { $ref: '#/components/schemas/Role' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /api/users/{id}:
+    patch:
+      tags: [users]
+      summary: Update user (admin). Admins cannot deactivate themselves or drop their own admin role.
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                role: { $ref: '#/components/schemas/Role' }
+                password: { type: string, minLength: 8 }
+                active: { type: boolean }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /api/merge-fields:
+    get:
+      tags: [merge-fields]
+      summary: Merge-field dictionary (any role)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/MergeField' } } } } } } }
+    post:
+      tags: [merge-fields]
+      summary: Add a field (admin)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MergeFieldInput' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/MergeField' } } } }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /api/merge-fields/{id}:
+    patch:
+      tags: [merge-fields]
+      summary: Update a field (admin). The key cannot change.
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: { type: string }
+                source: { $ref: '#/components/schemas/FieldSource' }
+                type: { $ref: '#/components/schemas/FieldType' }
+                format: { type: string, nullable: true }
+                required: { type: boolean }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MergeField' } } } }
+
+  /api/core/groups:
+    get:
+      tags: [core]
+      summary: Groups from the Core Engine
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/Group' } } } } } } }
+  /api/core/groups/{id}/students:
+    get:
+      tags: [core]
+      summary: Students of a group (passport number is never returned; `hasPassport` instead)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string }, example: grp-web-2026-a }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/Student' } } } } } } }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/core/staff:
+    get:
+      tags: [core]
+      summary: Staff members
+      responses: { '200': { description: OK } }
+  /api/core/partners:
+    get:
+      tags: [core]
+      summary: Partners
+      responses: { '200': { description: OK } }
+
+  /api/templates:
+    get:
+      tags: [templates]
+      summary: List templates
+      parameters:
+        - { name: category, in: query, schema: { $ref: '#/components/schemas/Category' } }
+        - { name: status, in: query, description: Templates having at least one version with this status, schema: { $ref: '#/components/schemas/VersionStatus' } }
+        - { name: q, in: query, description: Title search (case-insensitive), schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/TemplateListItem' } } } } } } }
+    post:
+      tags: [templates]
+      summary: Upload a new template (editor) -> v1 draft
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, title, category]
+              properties:
+                file: { type: string, format: binary, description: .docx }
+                title: { type: string }
+                category: { $ref: '#/components/schemas/Category' }
+      responses:
+        '201':
+          description: Created. `warnings` lists unknown fields, a missing signature field, or undetected clauses (Word auto-numbering).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  template: { type: object, properties: { id: { type: string }, title: { type: string }, category: { $ref: '#/components/schemas/Category' } } }
+                  version: { $ref: '#/components/schemas/TemplateVersion' }
+                  warnings: { type: array, items: { $ref: '#/components/schemas/UploadWarning' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '422': { description: 'INVALID_DOCX or TEMPLATE_SYNTAX_ERROR (details: tag, context, explanation)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/templates/{id}:
+    parameters: [{ $ref: '#/components/parameters/id' }]
+    get:
+      tags: [templates]
+      summary: Template with all versions
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [templates]
+      summary: Delete template (admin; only if no documents were generated)
+      responses:
+        '204': { description: Deleted }
+        '409': { description: TEMPLATE_IN_USE, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/templates/{id}/versions:
+    post:
+      tags: [templates]
+      summary: Upload a new version (editor) -> draft, compared automatically with the published version
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content: { multipart/form-data: { schema: { type: object, required: [file], properties: { file: { type: string, format: binary } } } } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { $ref: '#/components/schemas/TemplateVersion' }
+                  warnings: { type: array, items: { $ref: '#/components/schemas/UploadWarning' } }
+                  comparison: { $ref: '#/components/schemas/Comparison' }
+
+  /api/templates/{id}/versions/{vid}:
+    parameters: [{ $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/vid' }]
+    get:
+      tags: [templates]
+      summary: Version details (fields annotated with dictionary info, clauses, stored comparison and summary)
+      parameters:
+        - { name: locale, in: query, description: "`en` also returns `generatedSummary` in English", schema: { type: string, enum: [hy, en] } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TemplateVersion' } } } }
+    patch:
+      tags: [templates]
+      summary: Edit the change summary (editor; draft only)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [changeSummary], properties: { changeSummary: { type: string } } } } }
+      responses:
+        '200': { description: OK }
+        '409': { description: VERSION_NOT_DRAFT, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/templates/{id}/versions/{vid}/publish:
+    post:
+      tags: [templates]
+      summary: Publish a draft (editor). The previously published version becomes archived.
+      parameters: [{ $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/vid' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TemplateVersion' } } } }
+        '409': { description: VERSION_NOT_DRAFT }
+        '422': { description: UNKNOWN_FIELDS (details = list of field keys) }
+
+  /api/templates/{id}/versions/{vid}/preview:
+    get:
+      tags: [templates]
+      summary: PDF of the version filled with demo data
+      parameters: [{ $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/vid' }]
+      responses:
+        '200': { description: PDF (inline), content: { application/pdf: { schema: { type: string, format: binary } } } }
+
+  /api/templates/{id}/compare:
+    get:
+      tags: [templates]
+      summary: Clause-by-clause comparison of two versions + summary lines
+      parameters:
+        - { $ref: '#/components/parameters/id' }
+        - { name: from, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: to, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: locale, in: query, schema: { type: string, enum: [hy, en] } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Comparison'
+                  - type: object
+                    properties: { summary: { type: array, items: { type: string } } }
+
+  /api/batches/precheck:
+    post:
+      tags: [batches]
+      summary: Missing data per recipient + shared fields to fill (coordinator)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/BatchInput' } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Precheck' } } } }
+        '422': { description: VERSION_NOT_PUBLISHED }
+
+  /api/batches:
+    get:
+      tags: [batches]
+      summary: Generation history (coordinator)
+      parameters:
+        - { name: groupId, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/Batch' } } } } } } }
+    post:
+      tags: [batches]
+      summary: Start generation (coordinator). Runs as a background job; poll GET /api/batches/{id}.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/BatchInput' } } } }
+      responses:
+        '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/Batch' } } } }
+        '422': { description: 'MISSING_DATA (details: missingCommon, recipients) or VERSION_NOT_PUBLISHED' }
+
+  /api/batches/{id}:
+    get:
+      tags: [batches]
+      summary: Status and progress
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Batch' } } } }
+  /api/batches/{id}/zip:
+    get:
+      tags: [batches]
+      summary: ZIP with every PDF and DOCX
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: ZIP, content: { application/zip: { schema: { type: string, format: binary } } } }
+        '422': { description: BATCH_NOT_READY }
+  /api/batches/{id}/merged-pdf:
+    get:
+      tags: [batches]
+      summary: One PDF with all documents, for printing (`?inline=1` to display)
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } }
+
+  /api/documents:
+    get:
+      tags: [documents]
+      summary: List documents (no personal data beyond name/email)
+      parameters:
+        - { name: batchId, in: query, schema: { type: string } }
+        - { name: groupId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/DocumentStatus' } }
+        - { name: versionId, in: query, schema: { type: string } }
+        - { name: templateId, in: query, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/DocumentRow' } } } } } } }
+  /api/documents/{id}/pdf:
+    get:
+      tags: [documents]
+      summary: PDF (signed copy if signed online; `?original=1` for the unsigned one; `?inline=1` to display)
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+  /api/documents/{id}/docx:
+    get:
+      tags: [documents]
+      summary: Filled .docx
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses: { '200': { description: DOCX } }
+  /api/documents/{id}/scan:
+    get:
+      tags: [documents]
+      summary: Uploaded paper-signature scan
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses: { '200': { description: PDF/PNG/JPG }, '404': { $ref: '#/components/responses/Error' } }
+  /api/documents/send:
+    post:
+      tags: [documents]
+      summary: Email signing links (new link per document; older links are revoked)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [documentIds], properties: { documentIds: { type: array, items: { type: string, format: uuid } } } } } }
+      responses:
+        '200':
+          description: Per-document results (DOCUMENT_FINAL / NO_EMAIL / NOT_FOUND for failures)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: integer }
+                  results: { type: array, items: { type: object, properties: { id: { type: string }, ok: { type: boolean }, code: { type: string } } } }
+  /api/documents/{id}/remind:
+    post:
+      tags: [documents]
+      summary: Remind now
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '201': { description: Reminder logged and emailed }
+        '409': { description: DOCUMENT_FINAL / NOT_SENT / LINK_EXPIRED }
+  /api/documents/{id}/paper-signature:
+    post:
+      tags: [documents]
+      summary: Mark signed on paper and upload the scan (PDF/JPG/PNG)
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                signerName: { type: string }
+                signedAt: { type: string, format: date-time }
+      responses:
+        '201': { description: Signature recorded }
+        '409': { description: DOCUMENT_FINAL }
+  /api/documents/resend-new-version:
+    post:
+      tags: [documents]
+      summary: Regenerate for everyone who signed an older version and email it with the change summary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId]
+              properties:
+                templateId: { type: string, format: uuid }
+                documentIds: { type: array, items: { type: string, format: uuid }, description: Limit to these signed documents }
+                commonValues: { type: object, additionalProperties: true, description: Values for fields that are new in this version }
+      responses:
+        '202': { description: Batches started; emails go out when they complete }
+        '422': { description: VERSION_NOT_PUBLISHED or MISSING_DATA }
+
+  /api/signatures/table:
+    get:
+      tags: [signatures]
+      summary: Signature table (recipient · document · version · status · signed at)
+      parameters:
+        - { name: groupId, in: query, schema: { type: string } }
+        - { name: templateId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/DocumentStatus' } }
+        - { name: versionId, in: query, schema: { type: string } }
+        - { name: olderVersion, in: query, description: Signed an older version and has no document on the current one, schema: { type: boolean } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/DocumentRow' } } } } } } }
+  /api/signatures/export:
+    get:
+      tags: [signatures]
+      summary: Export the table (same filters) as CSV or XLSX
+      parameters:
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx], default: csv } }
+        - { name: locale, in: query, schema: { type: string, enum: [hy, en], default: hy } }
+        - { name: groupId, in: query, schema: { type: string } }
+        - { name: templateId, in: query, schema: { type: string } }
+        - { name: olderVersion, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: 'Columns: recipient, email, document, template, version, status, method, sentAt, signedAt, reminders' }
+
+  /api/sign/{token}:
+    parameters: [{ $ref: '#/components/parameters/token' }]
+    get:
+      tags: [sign]
+      security: []
+      summary: Document info for the signer; first open marks the document as viewed
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SignView' } } } }
+        '404': { description: Unknown token }
+        '410': { description: TOKEN_EXPIRED / TOKEN_REVOKED }
+    post:
+      tags: [sign]
+      security: []
+      summary: Confirm ("I have read and agree"). Stores time, IP, user agent; re-renders the PDF with ☑.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [agree], properties: { agree: { type: boolean, enum: [true] } } } } }
+      responses:
+        '200': { description: Signed, content: { application/json: { schema: { type: object, properties: { status: { type: string }, signedAt: { type: string, format: date-time }, documentNumber: { type: string } } } } } }
+        '400': { description: agree must be true }
+        '409': { description: ALREADY_SIGNED / ALREADY_DECLINED }
+        '410': { description: TOKEN_EXPIRED / TOKEN_REVOKED }
+  /api/sign/{token}/pdf:
+    get:
+      tags: [sign]
+      security: []
+      summary: The document PDF (signed copy after signing)
+      parameters: [{ $ref: '#/components/parameters/token' }]
+      responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+  /api/sign/{token}/decline:
+    post:
+      tags: [sign]
+      security: []
+      summary: Decline
+      parameters: [{ $ref: '#/components/parameters/token' }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { reason: { type: string } } } } } }
+      responses: { '200': { description: Declined }, '409': { description: ALREADY_SIGNED / ALREADY_DECLINED } }
+
+  /api/audit-log:
+    get:
+      tags: [audit]
+      summary: Audit trail (admin)
+      parameters:
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: entityId, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 500 } }
+      responses: { '200': { description: OK } }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    id: { name: id, in: path, required: true, schema: { type: string } }
+    vid: { name: vid, in: path, required: true, schema: { type: string, format: uuid } }
+    token: { name: token, in: path, required: true, schema: { type: string }, description: Raw token from the email link (43 chars base64url) }
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties: { code: { type: string }, message: { type: string }, details: {} }
+    Role: { type: string, enum: [admin, editor, coordinator] }
+    Category: { type: string, enum: [student_agreement, termination_act, enrollment_letter, vacation_order, partner_invoice] }
+    VersionStatus: { type: string, enum: [draft, published, archived] }
+    DocumentStatus: { type: string, enum: [created, sent, viewed, signed, declined, expired] }
+    FieldSource: { type: string, enum: [core, manual, system] }
+    FieldType: { type: string, enum: [text, date, money, number] }
+    AuthUser:
+      type: object
+      properties: { id: { type: string }, name: { type: string }, email: { type: string }, role: { $ref: '#/components/schemas/Role' } }
+    User:
+      allOf:
+        - $ref: '#/components/schemas/AuthUser'
+        - type: object
+          properties: { active: { type: boolean }, createdAt: { type: string, format: date-time } }
+    MergeFieldInput:
+      type: object
+      required: [key, label, source, type]
+      properties:
+        key: { type: string, example: student.full_name }
+        label: { type: string }
+        source: { $ref: '#/components/schemas/FieldSource' }
+        type: { $ref: '#/components/schemas/FieldType' }
+        format: { type: string, nullable: true }
+        required: { type: boolean, default: true }
+    MergeField:
+      allOf: [{ $ref: '#/components/schemas/MergeFieldInput' }, { type: object, properties: { id: { type: string } } }]
+    Group:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        courseName: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        schedule: { type: string }
+        studentCount: { type: integer }
+    Student:
+      type: object
+      properties:
+        id: { type: string }
+        groupId: { type: string }
+        fullName: { type: string }
+        address: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        birthDate: { type: string, nullable: true }
+        hasPassport: { type: boolean }
+    UploadWarning:
+      type: object
+      properties:
+        code: { type: string, enum: [UNKNOWN_FIELD, CLAUSES_NOT_DETECTED, MISSING_SIGNATURE_FIELD] }
+        field: { type: string }
+        message: { type: string, description: Armenian message (UI translates by code) }
+    Clause:
+      type: object
+      properties:
+        key: { type: string, example: 'n:4.2' }
+        kind: { type: string, enum: [preamble, numbered, heading] }
+        number: { type: string, nullable: true }
+        title: { type: string }
+        text: { type: string }
+    TemplateVersion:
+      type: object
+      properties:
+        id: { type: string }
+        templateId: { type: string }
+        versionNumber: { type: integer }
+        status: { $ref: '#/components/schemas/VersionStatus' }
+        fields:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: object
+                properties: { key: { type: string }, known: { type: boolean }, label: { type: string }, source: { type: string }, type: { type: string }, required: { type: boolean } }
+        warnings: { type: array, items: { $ref: '#/components/schemas/UploadWarning' } }
+        clauses: { type: array, items: { $ref: '#/components/schemas/Clause' } }
+        comparison: { $ref: '#/components/schemas/Comparison' }
+        comparedToId: { type: string, nullable: true }
+        changeSummary: { type: string, nullable: true, description: One line per change (Armenian) }
+        createdAt: { type: string, format: date-time }
+        publishedAt: { type: string, format: date-time, nullable: true }
+    TemplateListItem:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+        latestVersion: { type: object, nullable: true }
+        publishedVersion: { type: object, nullable: true }
+        hasDraft: { type: boolean }
+        versionCount: { type: integer }
+    Comparison:
+      type: object
+      nullable: true
+      properties:
+        fromVersionId: { type: string }
+        toVersionId: { type: string }
+        counts:
+          type: object
+          properties: { added: { type: integer }, removed: { type: integer }, changed: { type: integer }, unchanged: { type: integer }, moved: { type: integer } }
+        changes:
+          type: array
+          items:
+            type: object
+            properties:
+              status: { type: string, enum: [added, removed, changed, unchanged] }
+              moved: { type: boolean, description: Clause number changed (renumbered) }
+              kind: { type: string }
+              oldNumber: { type: string, nullable: true }
+              newNumber: { type: string, nullable: true }
+              title: { type: string }
+              oldText: { type: string, nullable: true }
+              newText: { type: string, nullable: true }
+              similarity: { type: number }
+              diff:
+                type: array
+                items: { type: object, properties: { type: { type: string, enum: [equal, added, removed] }, value: { type: string } } }
+    BatchInput:
+      type: object
+      required: [recipientType]
+      properties:
+        templateVersionId: { type: string, format: uuid }
+        templateId: { type: string, format: uuid, description: Alternative to templateVersionId (uses the published version) }
+        recipientType: { type: string, enum: [student, staff, partner] }
+        groupId: { type: string, example: grp-web-2026-a }
+        recipientIds: { type: array, items: { type: string } }
+        commonValues: { type: object, additionalProperties: true, example: { contract.date: '2026-11-21', contract.amount: 450000 } }
+        overrides: { type: object, additionalProperties: { type: object }, example: { stu-007: { student.passport: AN7654321 } } }
+        excludedIds: { type: array, items: { type: string } }
+    Precheck:
+      type: object
+      properties:
+        templateVersionId: { type: string }
+        total: { type: integer }
+        ready: { type: boolean }
+        commonFields: { type: array, items: { type: object, properties: { key: { type: string }, label: { type: string }, type: { type: string }, required: { type: boolean }, value: {} } } }
+        missingCommon: { type: array, items: { $ref: '#/components/schemas/MissingField' } }
+        recipients:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              email: { type: string, nullable: true }
+              excluded: { type: boolean }
+              missing: { type: array, items: { $ref: '#/components/schemas/MissingField' } }
+    MissingField:
+      type: object
+      properties: { key: { type: string }, label: { type: string }, source: { type: string }, type: { type: string } }
+    Batch:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [queued, running, completed, failed] }
+        progress: { type: integer }
+        total: { type: integer }
+        error: { type: string, nullable: true }
+        recipientType: { type: string }
+        groupId: { type: string, nullable: true }
+        groupName: { type: string, nullable: true }
+        templateVersionId: { type: string }
+        template: { type: object, properties: { id: { type: string }, title: { type: string }, category: { type: string }, versionNumber: { type: integer } } }
+        hasZip: { type: boolean }
+        hasMergedPdf: { type: boolean }
+        createdById: { type: string }
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+    DocumentRow:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string, example: PS-2026-000001 }
+        batchId: { type: string }
+        recipientType: { type: string }
+        recipientId: { type: string }
+        recipientName: { type: string }
+        recipientEmail: { type: string, nullable: true }
+        groupId: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/DocumentStatus' }
+        sentAt: { type: string, format: date-time, nullable: true }
+        viewedAt: { type: string, format: date-time, nullable: true }
+        template: { type: object, properties: { id: { type: string }, title: { type: string }, category: { type: string } } }
+        templateVersionId: { type: string }
+        versionNumber: { type: integer }
+        isCurrentVersion: { type: boolean }
+        signedAt: { type: string, format: date-time, nullable: true }
+        signatureMethod: { type: string, enum: [online, paper], nullable: true }
+        hasScan: { type: boolean }
+        hasSignedPdf: { type: boolean }
+        reminderCount: { type: integer }
+    SignView:
+      type: object
+      properties:
+        documentNumber: { type: string }
+        title: { type: string }
+        versionNumber: { type: integer }
+        recipientName: { type: string }
+        status: { $ref: '#/components/schemas/DocumentStatus' }
+        expiresAt: { type: string, format: date-time }
+        signedAt: { type: string, format: date-time, nullable: true }
+        signatureMethod: { type: string, nullable: true }
+        declinedAt: { type: string, format: date-time, nullable: true }
