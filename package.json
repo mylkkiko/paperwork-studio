@@ -1,0 +1,9 @@
+{
+  "name": "paperwork-studio",
+  "private": true,
+  "description": "Runs the test suites of both apps. Each app has its own package.json; install them first (see README).",
+  "scripts": {
+    "test": "npm --prefix backend test && npm --prefix frontend test",
+    "test:e2e": "npm --prefix frontend run test:e2e"
+  }
+}

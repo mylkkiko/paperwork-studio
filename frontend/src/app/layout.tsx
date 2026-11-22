@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
+import { IntlProvider } from '@/components/intl-provider';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
@@ -13,12 +13,13 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
+  const messages = await getMessages();
   return (
     <html lang={locale}>
       <body>
-        <NextIntlClientProvider>
+        <IntlProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
-        </NextIntlClientProvider>
+        </IntlProvider>
       </body>
     </html>
   );

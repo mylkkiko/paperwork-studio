@@ -339,3 +339,24 @@ Changes vs. the plan:
   an empty frame).
 - **Dependency pin**: Next 15.5 and next-intl require different `@swc/helpers` versions; pinned to 0.5.17 via npm
   `overrides`, and the folder is added to the standalone trace (`outputFileTracingIncludes`).
+
+## 11. Phase 4 and known limitations
+
+Tests: backend 326 (Jest + Supertest), frontend 58 unit/component (Vitest + RTL + MSW), 8 E2E (Playwright, real stack),
+including the product owner's additions (phone signing; hy → ru → en with no missing translations, verified to fail
+when a key is removed).
+
+Known limitations of this build:
+- **Core Engine is a stub** (in-memory data); a real `HttpCoreEngineClient` is still to be written.
+- **Files on local disk** (`StorageService` → S3 later); no virus scanning of uploaded scans.
+- **Auth**: JWT access token only (8 h), kept in `localStorage`; no refresh tokens, password reset or login rate limiting.
+  The public signing endpoints have no rate limiting either (tokens are 256-bit, so guessing is not practical).
+- **Templates**: Word automatic numbering is not parsed (warning `CLAUSES_NOT_DETECTED`); clause matching uses word
+  similarity thresholds (0.3 / 0.6) that may need tuning on real documents.
+- **PDF rendering** depends on the fonts in the Gotenberg image; the .docx files use Noto Serif Armenian, which Word on
+  Windows may not have installed (it substitutes a font).
+- **Emails** are plain text and always Armenian; delivery is to Mailpit in this environment.
+- **Phones** open the PDF in a new tab (no in-page renderer such as react-pdf).
+- **Reminders** run hourly (configurable cron), so a "day 2" reminder can arrive up to an hour after the 48 h mark.
+- **E2E** expires a link by updating Postgres directly (waiting 14 days is not practical).
+- **Native date inputs** show the browser's date format, not the selected UI language.

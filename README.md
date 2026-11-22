@@ -44,3 +44,26 @@ Signers have no account: they open the link from their email (see Mailpit).
 The test/staging environment has no extra password gates; only the app's own login.
 
 Clean restart with fresh demo data: `docker compose down -v && docker compose up --build`.
+
+## Tests
+
+```bash
+npm --prefix backend install && npm --prefix frontend install   # once
+npx --prefix frontend playwright install chromium              # once, for E2E
+docker compose up -d --build                                    # backend tests use its Postgres + Gotenberg; E2E uses the whole stack
+
+npm test            # backend (Jest + Supertest, 326 tests) + frontend unit/component (Vitest, 58 tests)
+npm run test:e2e    # Playwright end-to-end against the running stack (8 tests)
+```
+
+Details: [backend/README.md](backend/README.md#tests), [frontend/README.md](frontend/README.md#tests).
+
+## Not in this build (P2, extension points only)
+
+| Item | Extension point |
+| --- | --- |
+| In-browser template editor (T-9) | templates are uploaded as .docx; `TemplatesService.create/addVersion` take a buffer from any source |
+| LLM-written change summary (V-6) | `SummaryGenerator` interface (`backend/src/services/summary/`), wired in `backend/src/container.ts` |
+| Qualified e-signatures (S-8) | `SigningService` + `Signature.method` (add a method next to `online` / `paper`) |
+| Real Core Engine | `CoreEngineClient` interface; today `StubCoreEngineClient` |
+| S3 storage | `StorageService` interface; today `LocalStorageService` |

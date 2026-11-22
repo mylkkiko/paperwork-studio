@@ -98,4 +98,43 @@ src/app/                           routes
 | `npm run i18n:check` | Dictionary consistency |
 | `npm run screenshots` | Walks the main flow in a real browser against the Docker stack and saves `docs/screenshots/*.png` (reset the stack first: `docker compose down -v && docker compose up -d`) |
 
-Unit/component tests (Vitest + RTL + MSW) and E2E tests (Playwright) come in Phase 4.
+| `npm test` | Unit/component tests (Vitest + React Testing Library + MSW) |
+| `npm run test:coverage` | Same, with coverage |
+| `npm run test:e2e` | End-to-end tests (Playwright) against the running Docker stack |
+
+## Tests
+
+### Unit / component (`npm test`, no backend needed)
+
+The API is mocked with MSW, Next.js navigation is mocked, components render with the real i18n dictionaries.
+
+| File | Covers |
+| --- | --- |
+| `tests/unit/diff-view` | word diff (red removed / green added), clause rows: changed, added, removed, moved, preamble |
+| `tests/unit/wizard` | every step's validation, API payload (empty values dropped, amounts as numbers), shared-fields form errors and submit |
+| `tests/unit/precheck-table` | ready/missing/excluded summary, inline fill per recipient, exclude disables inputs |
+| `tests/unit/signatures` | filters ⇄ URL ⇄ API query, actions per status, select-all, "signed an older version" + resend, error state |
+| `tests/unit/roles` | menu per role, forbidden URLs show "No access", redirect to login, 403 handling |
+| `tests/unit/sign-flow` | signing page states: ready (checkbox gates confirm), signed, paper receipt, declined, expired, replaced, invalid, error |
+| `tests/unit/login` | demo one-click login, validation, translated error (Russian) |
+| `tests/unit/format-i18n` | Armenian/English/Russian dates, missing-translation marker, dictionary consistency |
+
+### End-to-end (`npm run test:e2e`)
+
+Against the real stack: `docker compose up -d --build` first (Chromium is installed with `npx playwright install chromium`).
+Each run creates its own templates with unique names, so it works on any database state; Mailpit is emptied first.
+
+| Spec | Scenario |
+| --- | --- |
+| `main-flow` 1 | editor uploads v2 → comparison (counts, word diff, summary) → edits summary → publishes; v1 archived |
+| `main-flow` 2 | coordinator wizard for the 24-student group: precheck fills, shared fields, progress → ZIP download (checked) → send 24 |
+| `main-flow` 3 | signer opens the link from Mailpit → ticks → signs; coordinator sees "signed" on v2 |
+| `main-flow` 4 | "remind now" → reminder email in Mailpit, counter updated |
+| `main-flow` 5 | "signed an older version" filter → resend → email with the change summary → new v2 document sent |
+| `main-flow` 6 | expired link → expired page; document shown as expired |
+| `mobile-signing` | phone viewport: "Open document" button (no empty PDF frame, no horizontal scroll), PDF opens, tap to sign, success |
+| `languages` | hy → ru → en on dashboard and signatures table: no missing keys (visible `⟦missing:…⟧` marker), no raw keys, no i18n console errors, choice remembered |
+
+Expiry can't be waited for (14 days), so scenario 6 moves the link's expiry into the past directly in Postgres
+(`docker compose exec postgres psql …`). A missing translation renders as `⟦missing:namespace.key⟧`
+(`src/i18n/fallback.ts`), which the language test looks for.
