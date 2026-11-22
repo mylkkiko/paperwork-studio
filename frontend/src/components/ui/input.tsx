@@ -1,33 +1,30 @@
 import * as React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const field =
+  'w-full rounded-md border border-border-strong/70 bg-surface text-sm text-text shadow-sm transition-colors placeholder:text-text-muted hover:border-border-strong disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-text-muted aria-[invalid=true]:border-danger-fg';
+
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(({ className, ...props }, ref) => (
-  <input
-    ref={ref}
-    className={cn(
-      'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 aria-[invalid=true]:border-destructive file:border-0 file:bg-transparent file:text-sm file:font-medium',
-      className,
-    )}
-    {...props}
-  />
+  <input ref={ref} className={cn(field, 'h-10 px-3', className)} {...props} />
 ));
 Input.displayName = 'Input';
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(({ className, ...props }, ref) => (
-  <textarea
-    ref={ref}
-    className={cn('flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50', className)}
-    {...props}
-  />
+  <textarea ref={ref} className={cn(field, 'min-h-24 px-3 py-2 leading-relaxed', className)} {...props} />
 ));
 Textarea.displayName = 'Textarea';
 
-/** Native select styled like the inputs: accessible and mobile-friendly without extra dependencies. */
-export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(({ className, ...props }, ref) => (
-  <select
-    ref={ref}
-    className={cn('flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50', className)}
-    {...props}
-  />
-));
+/**
+ * Native select (accessible, mobile-friendly) with a consistent chevron; follows the theme via color-scheme.
+ * `className` styles the select, `wrapperClassName` sizes the wrapper (default: full width).
+ */
+export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement> & { wrapperClassName?: string }>(
+  ({ className, wrapperClassName, ...props }, ref) => (
+    <div className={cn('relative w-full', wrapperClassName)}>
+      <select ref={ref} className={cn(field, 'h-10 appearance-none truncate pl-3 pr-9', className)} {...props} />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden />
+    </div>
+  ),
+);
 Select.displayName = 'Select';

@@ -107,13 +107,13 @@ export default function GeneratePage() {
               <div className="flex flex-col gap-4">
                 <SharedFieldsForm formId={SHARED_FORM_ID} fields={precheck.data.commonFields} values={state.commonValues} onSubmit={(v) => generate.mutate(v)} />
                 {generate.error && generateErrorAlert(generate.error)}
-                <p className="text-sm text-muted-foreground">{t('willGenerate', { count: precheck.data.total })}</p>
+                <p className="text-sm text-text-muted">{t('willGenerate', { count: precheck.data.total })}</p>
               </div>
             ))}
           {step === 'progress' && state.batchId && <ProgressStep batchId={state.batchId} onDone={() => setStep('done')} />}
           {step === 'done' && state.batchId && <DoneStep batchId={state.batchId} />}
           {error && step !== 'template' && step !== 'recipients' && error !== 'precheckPending' && (
-            <p className="mt-4 text-sm text-destructive" role="status">
+            <p className="mt-4 text-sm text-danger-fg" role="status">
               {t(`errors.${error}`)}
             </p>
           )}
@@ -191,7 +191,7 @@ function ProgressStep({ batchId, onDone }: { batchId: string; onDone: () => void
       <p className="text-center text-lg font-medium" data-testid="progress-text">
         {batch.progress} / {batch.total}
       </p>
-      <p className="text-center text-sm text-muted-foreground">{t(batch.status === 'queued' ? 'queued' : 'running')}</p>
+      <p className="text-center text-sm text-text-muted">{t(batch.status === 'queued' ? 'queued' : 'running')}</p>
     </div>
   );
 }
@@ -243,7 +243,7 @@ function DoneStep({ batchId }: { batchId: string }) {
         </Button>
       </div>
       <div className="flex flex-col gap-2 border-t pt-4">
-        <p className="text-sm text-muted-foreground">{t('sendHint')}</p>
+        <p className="text-sm text-text-muted">{t('sendHint')}</p>
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={() => send.mutate()} loading={send.isPending} disabled={!!sent}>
             <Send /> {t('send', { count: docs.data!.items.length })}

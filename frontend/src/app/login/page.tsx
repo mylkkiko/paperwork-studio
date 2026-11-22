@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useErrorMessage } from '@/components/states';
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
@@ -55,7 +56,11 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center gap-4 px-4 py-16">
+      <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-6 sm:top-4">
+        <LanguageSwitcher compact />
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-xl">{t('title')}</CardTitle>
@@ -66,12 +71,12 @@ function LoginForm() {
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">{t('email')}</Label>
               <Input id="email" type="email" autoComplete="username" aria-invalid={!!form.formState.errors.email} {...form.register('email')} />
-              {form.formState.errors.email && <p className="text-xs text-destructive">{t('emailInvalid')}</p>}
+              {form.formState.errors.email && <p className="text-xs text-danger-fg">{t('emailInvalid')}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="password">{t('password')}</Label>
               <Input id="password" type="password" autoComplete="current-password" aria-invalid={!!form.formState.errors.password} {...form.register('password')} />
-              {form.formState.errors.password && <p className="text-xs text-destructive">{t('passwordRequired')}</p>}
+              {form.formState.errors.password && <p className="text-xs text-danger-fg">{t('passwordRequired')}</p>}
             </div>
             {error && (
               <Alert variant="destructive">
@@ -86,22 +91,22 @@ function LoginForm() {
       </Card>
 
       {SHOW_DEMO_LOGINS && DEMO_ACCOUNTS.length > 0 && (
-        <Card className="w-full max-w-md border-dashed" data-testid="demo-logins">
+        <Card className="w-full max-w-md border-dashed shadow-none" data-testid="demo-logins">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">{t('demoTitle')}</CardTitle>
             <CardDescription className="text-xs">{t('demoHint')}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {DEMO_ACCOUNTS.map((a) => (
-              <div key={a.role} className="flex flex-col gap-2 rounded-md border bg-muted/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-xs">
-                  <div className="font-medium">{tr(a.role)}</div>
-                  <div className="text-muted-foreground">{a.email}</div>
-                  <div className="whitespace-nowrap text-muted-foreground">
-                    {t('password')}: <code className="text-foreground">{a.password}</code>
+              <div key={a.role} className="flex flex-col gap-2.5 rounded-md border bg-surface-muted px-3 py-3">
+                <div className="min-w-0 text-xs leading-relaxed">
+                  <div className="text-sm font-medium">{tr(a.role)}</div>
+                  <div className="text-text-muted [overflow-wrap:anywhere]">{a.email}</div>
+                  <div className="whitespace-nowrap text-text-muted">
+                    {t('password')}: <code className="text-text">{a.password}</code>
                   </div>
                 </div>
-                <Button size="sm" variant="secondary" className="shrink-0" onClick={() => loginAs(a.role)} loading={busyRole === a.role} disabled={!!busyRole}>
+                <Button size="sm" variant="secondary" className="self-start" onClick={() => loginAs(a.role)} loading={busyRole === a.role} disabled={!!busyRole}>
                   {t('loginAs', { role: tr(a.role) })}
                 </Button>
               </div>
@@ -109,7 +114,6 @@ function LoginForm() {
           </CardContent>
         </Card>
       )}
-      <LanguageSwitcher />
     </div>
   );
 }

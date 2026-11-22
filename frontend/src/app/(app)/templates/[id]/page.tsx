@@ -22,7 +22,6 @@ import { VersionStatusBadge } from '@/components/status-badge';
 import { UploadTemplateDialog } from '@/components/upload-dialog';
 import { PdfViewer } from '@/components/pdf-viewer';
 import { WarningsList } from '@/components/warnings';
-import { cn } from '@/lib/utils';
 
 type Version = TemplateDetail['versions'][number];
 
@@ -75,14 +74,15 @@ export default function TemplateDetailPage() {
         const selected = tpl.versions.find((v) => v.id === selectedId) ?? tpl.versions[0];
         return (
           <>
-            <Link href="/templates" className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+            <Link href="/templates" className="mb-3 inline-flex items-center gap-1 rounded-sm text-sm text-text-muted hover:text-text">
               <ArrowLeft className="h-4 w-4" /> {t('back')}
             </Link>
             <PageHeader
               title={tpl.title}
               description={
                 <span className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{tc(tpl.category)}</Badge>
+                  <span className="font-medium text-text">{tc(tpl.category)}</span>
+                  <span aria-hidden>·</span>
                   {t('documentCount', { count: tpl.documentCount })}
                 </span>
               }
@@ -94,7 +94,7 @@ export default function TemplateDetailPage() {
                     </Button>
                   )}
                   {can.deleteTemplates(role) && (
-                    <Button variant="outline" onClick={() => setConfirmDelete(true)} disabled={tpl.documentCount > 0} title={tpl.documentCount > 0 ? t('cannotDelete') : undefined}>
+                    <Button variant="secondary" onClick={() => setConfirmDelete(true)} disabled={tpl.documentCount > 0} title={tpl.documentCount > 0 ? t('cannotDelete') : undefined}>
                       <Trash2 /> {tCommon('delete')}
                     </Button>
                   )}
@@ -111,37 +111,37 @@ export default function TemplateDetailPage() {
                   <TR>
                     <TH>{t('version')}</TH>
                     <TH>{t('status')}</TH>
-                    <TH>{t('created')}</TH>
-                    <TH>{t('publishedAt')}</TH>
-                    <TH>{t('warnings')}</TH>
+                    <TH className="hidden md:table-cell">{t('created')}</TH>
+                    <TH className="hidden md:table-cell">{t('publishedAt')}</TH>
+                    <TH numeric>{t('warnings')}</TH>
                     <TH className="text-right">{tCommon('actions')}</TH>
                   </TR>
                 </THead>
                 <TBody>
                   {tpl.versions.map((v) => (
-                    <TR key={v.id} className={cn('cursor-pointer', v.id === selected?.id && 'bg-accent/60')} onClick={() => setSelectedId(v.id)} data-testid={`version-row-${v.versionNumber}`}>
-                      <TD className="font-medium">v{v.versionNumber}</TD>
+                    <TR key={v.id} className="cursor-pointer" data-selected={v.id === selected?.id} onClick={() => setSelectedId(v.id)} data-testid={`version-row-${v.versionNumber}`}>
+                      <TD sticky className="tabular font-semibold">v{v.versionNumber}</TD>
                       <TD>
                         <VersionStatusBadge status={v.status} />
                       </TD>
-                      <TD className="whitespace-nowrap">{f.dateTime(v.createdAt)}</TD>
-                      <TD className="whitespace-nowrap">{f.dateTime(v.publishedAt)}</TD>
-                      <TD>{v.warnings.length ? <Badge variant="warning">{v.warnings.length}</Badge> : '—'}</TD>
+                      <TD className="tabular hidden whitespace-nowrap text-text-muted md:table-cell">{f.dateTime(v.createdAt)}</TD>
+                      <TD className="tabular hidden whitespace-nowrap text-text-muted md:table-cell">{f.dateTime(v.publishedAt)}</TD>
+                      <TD numeric>{v.warnings.length ? <Badge variant="warning">{v.warnings.length}</Badge> : <span className="text-text-muted">—</span>}</TD>
                       <TD>
                         <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          <Button size="sm" variant="outline" onClick={() => setPreviewId(v.id)}>
-                            <Eye /> {t('preview')}
+                          <Button size="sm" variant="secondary" onClick={() => setPreviewId(v.id)} aria-label={t('preview')} title={t('preview')}>
+                            <Eye /> <span className="hidden 2xl:inline">{t('preview')}</span>
                           </Button>
                           {v.comparedToId && (
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/templates/${id}/compare?from=${v.comparedToId}&to=${v.id}`}>
-                                <GitCompare /> {t('compare')}
+                            <Button size="sm" variant="secondary" asChild>
+                              <Link href={`/templates/${id}/compare?from=${v.comparedToId}&to=${v.id}`} aria-label={t('compare')} title={t('compare')}>
+                                <GitCompare /> <span className="hidden 2xl:inline">{t('compare')}</span>
                               </Link>
                             </Button>
                           )}
                           {can.manageTemplates(role) && v.status === 'draft' && (
-                            <Button size="sm" onClick={() => setPublishing(v)}>
-                              <Rocket /> {t('publish')}
+                            <Button size="sm" onClick={() => setPublishing(v)} aria-label={t('publish')} title={t('publish')}>
+                              <Rocket /> <span className="hidden sm:inline">{t('publish')}</span>
                             </Button>
                           )}
                         </div>
@@ -157,7 +157,7 @@ export default function TemplateDetailPage() {
             {can.manageTemplates(role) && <UploadTemplateDialog open={uploadOpen} onOpenChange={setUploadOpen} templateId={id} />}
 
             <Dialog open={!!previewId} onOpenChange={(o) => !o && setPreviewId(null)}>
-              <DialogContent className="max-w-4xl" closeLabel={tCommon('close')}>
+              <DialogContent className="sm:max-w-4xl" closeLabel={tCommon('close')}>
                 <DialogHeader>
                   <DialogTitle>{t('previewTitle')}</DialogTitle>
                   <DialogDescription>{t('previewHint')}</DialogDescription>
@@ -172,9 +172,9 @@ export default function TemplateDetailPage() {
                   <DialogTitle>{t('publishTitle', { version: publishing?.versionNumber ?? '' })}</DialogTitle>
                   <DialogDescription>{t('publishHint')}</DialogDescription>
                 </DialogHeader>
-                {publishing?.changeSummary && <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 font-sans text-sm">{publishing.changeSummary}</pre>}
+                {publishing?.changeSummary && <pre className="whitespace-pre-wrap rounded-md bg-surface-muted p-3 font-sans text-sm leading-relaxed">{publishing.changeSummary}</pre>}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setPublishing(null)}>
+                  <Button variant="secondary" onClick={() => setPublishing(null)}>
                     {tCommon('cancel')}
                   </Button>
                   <Button onClick={() => publishing && publish.mutate(publishing.id)} loading={publish.isPending}>
@@ -191,7 +191,7 @@ export default function TemplateDetailPage() {
                   <DialogDescription>{t('deleteHint', { title: tpl.title })}</DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+                  <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
                     {tCommon('cancel')}
                   </Button>
                   <Button variant="destructive" onClick={() => remove.mutate()} loading={remove.isPending}>
@@ -229,7 +229,7 @@ function VersionPanel({ templateId, versionId }: { templateId: string; versionId
                 <ul className="flex flex-wrap gap-1.5" data-testid="fields">
                   {v.fields.map((fl) => (
                     <li key={fl.key}>
-                      <Badge variant={fl.known ? 'outline' : 'destructive'} title={fl.known ? `${fl.label} · ${tSource(fl.source!)} · ${tType(fl.type!)}` : t('unknownField')} data-unknown={!fl.known || undefined}>
+                      <Badge variant={fl.known ? 'neutral' : 'danger'} title={fl.known ? `${fl.label} · ${tSource(fl.source!)} · ${tType(fl.type!)}` : t('unknownField')} data-unknown={!fl.known || undefined}>
                         <code>{`{{${fl.key}}}`}</code>
                       </Badge>
                     </li>
@@ -244,7 +244,7 @@ function VersionPanel({ templateId, versionId }: { templateId: string; versionId
               </CardHeader>
               {v.changeSummary && (
                 <CardContent>
-                  <ul className="list-disc space-y-1 pl-5 text-sm" lang="hy">
+                  <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed" lang="hy">
                     {v.changeSummary.split('\n').filter(Boolean).map((l, i) => (
                       <li key={i}>{l}</li>
                     ))}

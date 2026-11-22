@@ -15,7 +15,9 @@
     "back": "Back",
     "next": "Next",
     "chooseFile": "Choose file",
-    "noFileChosen": "No file chosen"
+    "noFileChosen": "No file chosen",
+    "backToDashboard": "Back to the dashboard",
+    "clearFilters": "Clear filters"
   },
   "nav": {
     "main": "Main navigation",
@@ -27,7 +29,8 @@
     "generate": "Generate pack",
     "signatures": "Signatures",
     "users": "Users",
-    "mergeFields": "Merge fields"
+    "mergeFields": "Merge fields",
+    "account": "Account"
   },
   "roles": {
     "admin": "Administrator",
@@ -146,7 +149,8 @@
     "noWaiting": "No documents are waiting for a signature.",
     "waitingCount": "{count, plural, one {# document is waiting} other {# documents are waiting}}",
     "drafts": "Drafts to review",
-    "noDrafts": "No draft versions."
+    "noDrafts": "No draft versions.",
+    "noBatchesHint": "Packs you generate appear here."
   },
   "templates": {
     "title": "Templates",
@@ -161,7 +165,9 @@
     "name": "Name",
     "published": "Published",
     "latest": "Latest version",
-    "created": "Created"
+    "created": "Created",
+    "emptyHint": "Try another name, category or status.",
+    "emptyAllHint": "Upload a Word template with merge fields to get started."
   },
   "upload": {
     "title": "Upload template",
@@ -249,7 +255,8 @@
     "summarySaved": "Summary saved.",
     "publish": "Publish",
     "published": "Version published.",
-    "publishBlocked": "Cannot publish: unknown fields {fields}."
+    "publishBlocked": "Cannot publish: unknown fields {fields}.",
+    "legend": "Legend"
   },
   "generate": {
     "title": "Generate pack",
@@ -261,7 +268,8 @@
       "precheck": "Check data",
       "shared": "Shared fields",
       "progress": "Generating",
-      "done": "Downloads"
+      "done": "Downloads",
+      "counter": "Step {current} of {total}"
     },
     "stepTitle": {
       "template": "1. Choose a template",
@@ -380,7 +388,10 @@
       "signedAt": "Signature date",
       "submit": "Mark as signed",
       "saved": "Paper signature of {name} recorded."
-    }
+    },
+    "filters": "Filters",
+    "emptyHint": "Documents appear here after a pack is generated.",
+    "goGenerate": "Generate a pack"
   },
   "sign": {
     "pageTitle": "Document confirmation",
@@ -447,5 +458,11 @@
       "keyInvalid": "Use lowercase dotted keys, e.g. contract.discount",
       "saved": "Field saved."
     }
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

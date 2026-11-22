@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { FileSpreadsheet, RefreshCw, Send, Sheet } from 'lucide-react';
+import { FileSpreadsheet, ListFilter, PenLine, RefreshCw, Send, Sheet, X } from 'lucide-react';
+import Link from 'next/link';
 import { api, apiBlob, download } from '@/lib/api';
 import { DOCUMENT_STATUSES, type DocumentRow, type Group, type SendResult, type TemplateDetail, type TemplateListItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,6 +26,7 @@ import { filtersFromParams, filtersToQuery, type SignatureFilters } from '@/lib/
 function SignaturesPageInner() {
   const t = useTranslations('signatures');
   const tStatus = useTranslations('docStatus');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const errorMessage = useErrorMessage();
   const router = useRouter();
@@ -35,6 +38,8 @@ function SignaturesPageInner() {
   const [viewDoc, setViewDoc] = useState<DocumentRow | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState<'csv' | 'xlsx' | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilters = [filters.groupId, filters.templateId, filters.versionId, filters.status, filters.olderVersion].filter(Boolean).length;
 
   const setFilter = (patch: Partial<SignatureFilters>) => {
     const next = { ...filters, ...patch };
@@ -116,19 +121,24 @@ function SignaturesPageInner() {
         description={t('description')}
         actions={
           <>
-            <Button variant="outline" onClick={() => exportAs('csv')} loading={exporting === 'csv'}>
+            <Button variant="secondary" className="md:hidden" onClick={() => setFiltersOpen((o) => !o)} aria-expanded={filtersOpen} aria-controls="signature-filters">
+              <ListFilter /> {t('filters')}
+              {activeFilters > 0 && <span className="tabular rounded-sm bg-accent-soft px-1.5 text-xs text-accent-text">{activeFilters}</span>}
+            </Button>
+            <Button variant="secondary" onClick={() => exportAs('csv')} loading={exporting === 'csv'}>
               <Sheet /> CSV
             </Button>
-            <Button variant="outline" onClick={() => exportAs('xlsx')} loading={exporting === 'xlsx'}>
+            <Button variant="secondary" onClick={() => exportAs('xlsx')} loading={exporting === 'xlsx'}>
               <FileSpreadsheet /> XLSX
             </Button>
           </>
         }
       />
 
-      <Card className="mb-4 grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* phones: filters collapse behind the "Filters" button; always visible from md up */}
+      <Card id="signature-filters" className={cn('mb-4 gap-3 p-4 sm:grid-cols-2 md:grid lg:grid-cols-5', filtersOpen ? 'grid' : 'hidden')}>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="f-group" className="text-xs">{t('group')}</Label>
+          <Label htmlFor="f-group" className="text-xs text-text-muted">{t('group')}</Label>
           <Select id="f-group" value={filters.groupId} onChange={(e) => setFilter({ groupId: e.target.value })}>
             <option value="">{t('allGroups')}</option>
             {groups.data?.items.map((g) => (
@@ -139,7 +149,7 @@ function SignaturesPageInner() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="f-template" className="text-xs">{t('template')}</Label>
+          <Label htmlFor="f-template" className="text-xs text-text-muted">{t('template')}</Label>
           <Select id="f-template" value={filters.templateId} onChange={(e) => setFilter({ templateId: e.target.value })}>
             <option value="">{t('allTemplates')}</option>
             {templates.data?.items.map((tpl) => (
@@ -150,7 +160,7 @@ function SignaturesPageInner() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="f-version" className="text-xs">{t('version')}</Label>
+          <Label htmlFor="f-version" className="text-xs text-text-muted">{t('version')}</Label>
           <Select id="f-version" value={filters.versionId} disabled={!filters.templateId} onChange={(e) => setFilter({ versionId: e.target.value })}>
             <option value="">{t('allVersions')}</option>
             {template.data?.versions.map((v) => (
@@ -161,7 +171,7 @@ function SignaturesPageInner() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="f-status" className="text-xs">{t('status')}</Label>
+          <Label htmlFor="f-status" className="text-xs text-text-muted">{t('status')}</Label>
           <Select id="f-status" value={filters.status} onChange={(e) => setFilter({ status: e.target.value })}>
             <option value="">{t('allStatuses')}</option>
             {DOCUMENT_STATUSES.map((s) => (
@@ -171,7 +181,7 @@ function SignaturesPageInner() {
             ))}
           </Select>
         </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm">
+        <label className="flex min-h-10 items-center gap-2.5 self-end text-sm">
           <Checkbox checked={filters.olderVersion} onCheckedChange={(v) => setFilter({ olderVersion: v === true })} />
           {t('olderVersion')}
         </label>
@@ -189,7 +199,7 @@ function SignaturesPageInner() {
       )}
 
       {selected.length > 0 && (
-        <div className="mb-3 flex items-center gap-3 rounded-md border bg-background p-2 text-sm">
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-accent/30 bg-accent-soft px-4 py-2.5 text-sm text-accent-text">
           <span>{t('selected', { count: selected.length })}</span>
           <Button size="sm" onClick={() => send.mutate()} loading={send.isPending}>
             <Send /> {t('sendSelected')}
@@ -200,7 +210,24 @@ function SignaturesPageInner() {
       <QueryState query={table}>
         {({ items }) =>
           items.length === 0 ? (
-            <EmptyState>{t('empty')}</EmptyState>
+            <EmptyState
+              hint={activeFilters ? undefined : t('emptyHint')}
+              action={
+                activeFilters ? (
+                  <Button variant="secondary" onClick={() => router.replace('/signatures')}>
+                    <X /> {tCommon('clearFilters')}
+                  </Button>
+                ) : (
+                  <Button asChild>
+                    <Link href="/generate">
+                      <PenLine /> {t('goGenerate')}
+                    </Link>
+                  </Button>
+                )
+              }
+            >
+              {t('empty')}
+            </EmptyState>
           ) : (
             <Card>
               <SignaturesTable
@@ -220,7 +247,7 @@ function SignaturesPageInner() {
 
       <PaperSignatureDialog doc={paperDoc} onClose={() => setPaperDoc(null)} />
       <Dialog open={!!viewDoc} onOpenChange={(o) => !o && setViewDoc(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {viewDoc?.number} · {viewDoc?.recipientName}

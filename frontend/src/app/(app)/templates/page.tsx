@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Search, Upload } from 'lucide-react';
+import { FilePlus2, Search, Upload, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { can } from '@/lib/roles';
@@ -14,7 +14,6 @@ import { CATEGORIES, type TemplateListItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { EmptyState, PageHeader, QueryState } from '@/components/states';
 import { VersionStatusBadge } from '@/components/status-badge';
@@ -24,6 +23,7 @@ function TemplatesList() {
   const t = useTranslations('templates');
   const tc = useTranslations('categories');
   const tv = useTranslations('versionStatus');
+  const tCommon = useTranslations('common');
   const f = useFormat();
   const role = useAuth().user?.role;
   const router = useRouter();
@@ -65,11 +65,11 @@ function TemplatesList() {
           )
         }
       />
-      <Card className="mb-4 grid gap-3 p-3 sm:grid-cols-3">
+      <Card className="mb-4 grid gap-3 p-4 sm:grid-cols-3">
         <label className="relative">
           <span className="sr-only">{t('search')}</span>
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden />
-          <Input className="pl-8" placeholder={t('search')} value={q} onChange={(e) => setQ(e.target.value)} />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden />
+          <Input className="pl-9" placeholder={t('search')} value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
         <Select aria-label={t('category')} value={category} onChange={(e) => setParam('category', e.target.value)}>
           <option value="">{t('allCategories')}</option>
@@ -91,7 +91,28 @@ function TemplatesList() {
       <QueryState query={query}>
         {({ items }) =>
           items.length === 0 ? (
-            <EmptyState>{t('empty')}</EmptyState>
+            <EmptyState
+              hint={category || status || debouncedQ ? t('emptyHint') : t('emptyAllHint')}
+              action={
+                category || status || debouncedQ ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setQ('');
+                      router.replace('/templates');
+                    }}
+                  >
+                    <X /> {tCommon('clearFilters')}
+                  </Button>
+                ) : can.manageTemplates(role) ? (
+                  <Button onClick={() => setUploadOpen(true)}>
+                    <FilePlus2 /> {t('upload')}
+                  </Button>
+                ) : undefined
+              }
+            >
+              {t('empty')}
+            </EmptyState>
           ) : (
             <Card>
               <Table>
@@ -108,22 +129,20 @@ function TemplatesList() {
                   {items.map((tpl) => (
                     <TR key={tpl.id}>
                       <TD>
-                        <Link href={`/templates/${tpl.id}`} className="font-medium text-primary hover:underline">
+                        <Link href={`/templates/${tpl.id}`} className="rounded-sm font-medium text-accent-text hover:underline">
                           {tpl.title}
                         </Link>
                       </TD>
-                      <TD>
-                        <Badge variant="outline">{tc(tpl.category)}</Badge>
-                      </TD>
-                      <TD>{tpl.publishedVersion ? `v${tpl.publishedVersion.versionNumber}` : '—'}</TD>
+                      <TD className="text-text-muted">{tc(tpl.category)}</TD>
+                      <TD className="tabular">{tpl.publishedVersion ? `v${tpl.publishedVersion.versionNumber}` : <span className="text-text-muted">—</span>}</TD>
                       <TD>
                         {tpl.latestVersion && (
-                          <span className="flex items-center gap-2">
-                            v{tpl.latestVersion.versionNumber} <VersionStatusBadge status={tpl.latestVersion.status} />
+                          <span className="flex items-center gap-2 whitespace-nowrap">
+                            <span className="tabular">v{tpl.latestVersion.versionNumber}</span> <VersionStatusBadge status={tpl.latestVersion.status} />
                           </span>
                         )}
                       </TD>
-                      <TD className="whitespace-nowrap text-muted-foreground">{f.date(tpl.createdAt)}</TD>
+                      <TD className="tabular whitespace-nowrap text-text-muted">{f.date(tpl.createdAt)}</TD>
                     </TR>
                   ))}
                 </TBody>

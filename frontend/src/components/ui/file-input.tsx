@@ -17,7 +17,7 @@ export const FileInput = React.forwardRef<HTMLInputElement, Props>(({ className,
   return (
     <label
       className={cn(
-        'flex h-9 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-within:ring-2 focus-within:ring-ring has-[[aria-invalid=true]]:border-destructive',
+        'flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-border-strong/70 bg-surface px-2 text-sm shadow-sm hover:border-border-strong focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus has-[[aria-invalid=true]]:border-danger-fg',
         className,
       )}
     >
@@ -31,8 +31,8 @@ export const FileInput = React.forwardRef<HTMLInputElement, Props>(({ className,
         }}
         {...props}
       />
-      <span className="shrink-0 rounded bg-secondary px-2 py-1 text-xs font-medium">{buttonLabel}</span>
-      <span className={cn('truncate', !name && 'text-muted-foreground')}>{name || emptyLabel}</span>
+      <span className="shrink-0 rounded bg-surface-muted px-2 py-1 text-xs font-medium">{buttonLabel}</span>
+      <span className={cn('truncate', !name && 'text-text-muted')}>{name || emptyLabel}</span>
     </label>
   );
 });

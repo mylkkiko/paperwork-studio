@@ -11,9 +11,9 @@ export function WarningsList({ warnings }: { warnings: UploadWarning[] }) {
   return (
     <ul className="flex flex-col gap-1.5" data-testid="warnings">
       {warnings.map((w, i) => (
-        <li key={i} className="flex items-start gap-2 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[oklch(0.55_0.14_70)]" aria-hidden />
-          <span>{t(w.code, { field: w.field ?? '' })}</span>
+        <li key={i} className="flex items-start gap-2 rounded-md bg-warning-bg px-3 py-2 text-sm text-warning-fg">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span className="[overflow-wrap:anywhere]">{t(w.code, { field: w.field ?? '' })}</span>
         </li>
       ))}
     </ul>

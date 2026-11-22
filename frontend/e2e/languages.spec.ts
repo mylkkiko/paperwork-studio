@@ -65,3 +65,43 @@ test('hy -> ru -> en on the dashboard and the signatures table', async ({ page }
   await expect(page.getByRole('heading', { name: 'Signatures' })).toBeVisible();
   await setLanguage(page, 'hy');
 });
+
+/** Armenian words are long: on a phone nothing may overflow the screen width, in any of the three languages. */
+test.describe('phone layout in hy / ru / en', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('no horizontal overflow on the main screens', async ({ page }) => {
+    const { templateId } = await (await Api.as('editor')).createPublishedTemplate(unique('E2E լայնություն'));
+    await loginAs(page, 'coordinator');
+    for (const locale of ['hy', 'ru', 'en'] as const) {
+      if (locale !== 'hy') await setLanguage(page, locale);
+      for (const path of ['/dashboard', '/templates', `/templates/${templateId}`, '/generate', '/signatures']) {
+        await page.goto(path);
+        await page.waitForLoadState('networkidle');
+        const overflow = await page.evaluate(() => {
+          const vw = document.documentElement.clientWidth;
+          // elements that stick out of the viewport (scroll containers like tables are allowed to scroll inside)
+          return [...document.querySelectorAll('body *')]
+            .filter((el) => {
+              const r = el.getBoundingClientRect();
+              if (r.width === 0 || r.right <= vw + 1) return false;
+              for (let p = el.parentElement; p; p = p.parentElement) {
+                const o = getComputedStyle(p).overflowX;
+                if (o === 'auto' || o === 'scroll' || o === 'hidden') return false;
+              }
+              return true;
+            })
+            .slice(0, 3)
+            .map((el) => `${el.tagName.toLowerCase()}.${String(el.className).slice(0, 60)} "${(el.textContent ?? '').trim().slice(0, 40)}"`);
+        });
+        expect({ locale, path, overflow, pageWider: await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth) }).toEqual({
+          locale,
+          path,
+          overflow: [],
+          pageWider: false,
+        });
+      }
+    }
+    await setLanguage(page, 'hy');
+  });
+});

@@ -77,6 +77,14 @@ src/components/                    app shell, states (loading / error / 403), PD
 src/app/                           routes
 ```
 
+### Look and theme
+
+Design tokens for light and dark live in `src/app/globals.css` (see [docs/UI-REDESIGN.md](../docs/UI-REDESIGN.md) for
+the measured contrast of every pair). Components use only tokens. The brand colour is the single variable `--brand`;
+all accent shades in both themes are derived from it, so changing it is one line (then run `npm run test:e2e` —
+the axe test checks contrast). Theme: next-themes, Light / Dark / System (default), toggle in the header and on the
+signing page, stored in `localStorage`.
+
 ### Rules followed
 
 - **No hard-coded UI strings**: every text goes through `next-intl`. `npm run i18n:check` checks that hy/en/ru have
@@ -132,8 +140,10 @@ Each run creates its own templates with unique names, so it works on any databas
 | `main-flow` 4 | "remind now" → reminder email in Mailpit, counter updated |
 | `main-flow` 5 | "signed an older version" filter → resend → email with the change summary → new v2 document sent |
 | `main-flow` 6 | expired link → expired page; document shown as expired |
+| `theme` | Light / Dark / System toggle, choice persists after reload, System follows the OS (`colorScheme`), no flash of the wrong theme, PDF area stays white |
+| `a11y` | axe-core (WCAG 2.1 A/AA incl. contrast) on login, signing page, dashboards, templates, template detail, compare, wizard, signatures, admin — light and dark; fails on serious/critical |
 | `mobile-signing` | phone viewport: "Open document" button (no empty PDF frame, no horizontal scroll), PDF opens, tap to sign, success |
-| `languages` | hy → ru → en on dashboard and signatures table: no missing keys (visible `⟦missing:…⟧` marker), no raw keys, no i18n console errors, choice remembered |
+| `languages` | hy → ru → en on dashboard and signatures table: no missing keys (visible `⟦missing:…⟧` marker), no raw keys, no i18n console errors, choice remembered; phone (375 px): nothing overflows the screen in any language |
 
 Expiry can't be waited for (14 days), so scenario 6 moves the link's expiry into the past directly in Postgres
 (`docker compose exec postgres psql …`). A missing translation renders as `⟦missing:namespace.key⟧`

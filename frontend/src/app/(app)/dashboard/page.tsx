@@ -23,7 +23,8 @@ export default function DashboardPage() {
     <>
       <PageHeader title={t('title')} description={t('welcome', { name: user?.name ?? '' })} />
       <QuickActions />
-      <div className="mt-6 grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
+      {/* two columns only on very wide screens: tables need the full width at laptop sizes */}
+      <div className="mt-6 grid gap-6 2xl:grid-cols-2 [&>*]:min-w-0">
         {can.generate(role) && <RecentBatches />}
         {can.manageSignatures(role) && <WaitingDocuments />}
         {can.manageTemplates(role) && <DraftTemplates />}
@@ -42,14 +43,20 @@ function QuickActions() {
     { href: '/templates', label: t('actionTemplates'), icon: FileText, show: true },
   ].filter((a) => a.show);
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={t('quickActions')}>
+    <nav className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t('quickActions')}>
       {actions.map(({ href, label, icon: Icon }) => (
-        <Link key={href} href={href} className="flex items-center gap-3 rounded-lg border bg-background p-4 text-sm font-medium shadow-sm hover:border-primary/40 hover:bg-accent">
-          <Icon className="h-5 w-5 text-primary" aria-hidden />
-          {label}
+        <Link
+          key={href}
+          href={href}
+          className="group flex min-h-16 items-center gap-3 rounded-lg border bg-surface px-4 py-3 text-sm font-medium shadow-sm transition-colors hover:border-accent/40 hover:bg-accent-soft"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-text transition-colors group-hover:bg-surface" aria-hidden>
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+          <span className="leading-snug">{label}</span>
         </Link>
       ))}
-    </div>
+    </nav>
   );
 }
 
@@ -66,14 +73,14 @@ function RecentBatches() {
         <QueryState query={query} rows={3}>
           {({ items }) =>
             items.length === 0 ? (
-              <EmptyState>{t('noBatches')}</EmptyState>
+              <EmptyState hint={t('noBatchesHint')}>{t('noBatches')}</EmptyState>
             ) : (
               <Table>
                 <THead>
                   <TR>
                     <TH>{t('template')}</TH>
                     <TH>{t('group')}</TH>
-                    <TH>{t('documents')}</TH>
+                    <TH numeric>{t('documents')}</TH>
                     <TH>{t('status')}</TH>
                     <TH>{t('when')}</TH>
                   </TR>
@@ -81,17 +88,20 @@ function RecentBatches() {
                 <TBody>
                   {items.map((b) => (
                     <TR key={b.id}>
-                      <TD>
-                        {b.template?.title} <span className="text-muted-foreground">v{b.template?.versionNumber}</span>
+                      <TD className="max-w-56">
+                        <div className="truncate font-medium" title={b.template?.title}>
+                          {b.template?.title}
+                        </div>
+                        <div className="tabular text-xs text-text-muted">v{b.template?.versionNumber}</div>
                       </TD>
                       <TD className="whitespace-nowrap">{b.groupName ?? '—'}</TD>
-                      <TD className="whitespace-nowrap">
+                      <TD numeric className="whitespace-nowrap">
                         {b.progress} / {b.total}
                       </TD>
                       <TD>
                         <BatchStatusBadge status={b.status} />
                       </TD>
-                      <TD className="whitespace-nowrap text-muted-foreground">{f.date(b.createdAt)}</TD>
+                      <TD className="tabular whitespace-nowrap text-text-muted">{f.date(b.createdAt)}</TD>
                     </TR>
                   ))}
                 </TBody>
@@ -135,19 +145,19 @@ function WaitingDocuments() {
               <EmptyState>{t('noWaiting')}</EmptyState>
             ) : (
               <>
-                <p className="mb-2 text-sm text-muted-foreground" data-testid="waiting-count">
+                <p className="mb-3 text-sm text-text-muted" data-testid="waiting-count">
                   {t('waitingCount', { count: docs.length })}
                 </p>
                 <Table>
                   <TBody>
                     {docs.slice(0, 6).map((d) => (
                       <TR key={d.id}>
-                        <TD>{d.recipientName}</TD>
-                        <TD className="whitespace-nowrap text-muted-foreground">{d.number}</TD>
+                        <TD className="font-medium">{d.recipientName}</TD>
+                        <TD className="tabular whitespace-nowrap text-text-muted">{d.number}</TD>
                         <TD>
                           <DocumentStatusBadge status={d.status} />
                         </TD>
-                        <TD className="whitespace-nowrap text-muted-foreground">{f.date(d.sentAt)}</TD>
+                        <TD className="tabular whitespace-nowrap text-text-muted">{f.date(d.sentAt)}</TD>
                       </TR>
                     ))}
                   </TBody>
@@ -178,12 +188,12 @@ function DraftTemplates() {
               <ul className="divide-y">
                 {items.map((tpl) => (
                   <li key={tpl.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-                    <Link href={`/templates/${tpl.id}`} className="font-medium hover:underline">
+                    <Link href={`/templates/${tpl.id}`} className="rounded-sm font-medium text-accent-text hover:underline">
                       {tpl.title}
                     </Link>
                     {tpl.latestVersion && (
-                      <span className="flex items-center gap-2">
-                        v{tpl.latestVersion.versionNumber} <VersionStatusBadge status={tpl.latestVersion.status} />
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="tabular">v{tpl.latestVersion.versionNumber}</span> <VersionStatusBadge status={tpl.latestVersion.status} />
                       </span>
                     )}
                   </li>

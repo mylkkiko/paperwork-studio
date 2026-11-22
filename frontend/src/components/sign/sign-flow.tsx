@@ -60,15 +60,15 @@ export function SignFlow({ token }: { token: string }) {
   const doc = query.data;
 
   if (state === 'loading') return <LoadingState rows={5} />;
-  if (state === 'invalid') return <EndState icon={<Link2Off className="h-10 w-10 text-muted-foreground" />} title={t('invalidTitle')} text={t('invalidText')} testId="sign-invalid" />;
-  if (state === 'expired') return <EndState icon={<Clock className="h-10 w-10 text-warning" />} title={t('expiredTitle')} text={t('expiredText')} testId="sign-expired" />;
-  if (state === 'revoked') return <EndState icon={<Link2Off className="h-10 w-10 text-warning" />} title={t('revokedTitle')} text={t('revokedText')} testId="sign-revoked" />;
-  if (state === 'error') return <EndState icon={<FileX2 className="h-10 w-10 text-destructive" />} title={t('errorTitle')} text={errorMessage(query.error)} testId="sign-error" />;
+  if (state === 'invalid') return <EndState icon={<Link2Off className="h-8 w-8 text-text-muted" />} title={t('invalidTitle')} text={t('invalidText')} testId="sign-invalid" />;
+  if (state === 'expired') return <EndState icon={<Clock className="h-8 w-8 text-warning-fg" />} title={t('expiredTitle')} text={t('expiredText')} testId="sign-expired" />;
+  if (state === 'revoked') return <EndState icon={<Link2Off className="h-8 w-8 text-warning-fg" />} title={t('revokedTitle')} text={t('revokedText')} testId="sign-revoked" />;
+  if (state === 'error') return <EndState icon={<FileX2 className="h-8 w-8 text-danger-fg" />} title={t('errorTitle')} text={errorMessage(query.error)} testId="sign-error" />;
 
   const pdfSrc = apiUrl(`/sign/${token}/pdf`, { v: doc!.signedAt ?? doc!.status });
   const header = (
     <CardHeader>
-      <CardTitle className="text-lg">{doc!.title}</CardTitle>
+      <CardTitle className="text-xl">{doc!.title}</CardTitle>
       <CardDescription>
         {t('documentInfo', { number: doc!.documentNumber, version: doc!.versionNumber, name: doc!.recipientName })}
       </CardDescription>
@@ -82,7 +82,7 @@ export function SignFlow({ token }: { token: string }) {
         <CardContent className="flex flex-col gap-4">
           {state === 'signed' ? (
             <Alert variant="success" data-testid="sign-success">
-              <CheckCircle2 className="text-success" />
+              <CheckCircle2 />
               <AlertDescription>
                 <p className="font-medium">{t('signedTitle')}</p>
                 <p>{t(doc!.signatureMethod === 'paper' ? 'signedPaperText' : 'signedText', { date: f.dateTime(doc!.signedAt) })}</p>
@@ -107,11 +107,11 @@ export function SignFlow({ token }: { token: string }) {
     <Card>
       {header}
       <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">{t('expiresAt', { date: f.date(doc!.expiresAt) })}</p>
+        <p className="text-sm text-text-muted">{t('expiresAt', { date: f.date(doc!.expiresAt) })}</p>
         <PdfViewer src={pdfSrc} title={doc!.title} />
-        <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t bg-background/95 p-4 backdrop-blur sm:static sm:mx-0 sm:rounded-md sm:border">
-          <label className="flex items-start gap-3 text-sm" htmlFor="agree">
-            <Checkbox id="agree" checked={agree} onCheckedChange={(v) => setAgree(v === true)} className="mt-0.5" />
+        <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t bg-surface/95 p-4 shadow-[0_-4px_12px_rgb(0_0_0/0.06)] backdrop-blur sm:static sm:mx-0 sm:rounded-lg sm:border sm:bg-surface-muted sm:shadow-none">
+          <label className="flex cursor-pointer items-start gap-3 text-base" htmlFor="agree">
+            <Checkbox id="agree" checked={agree} onCheckedChange={(v) => setAgree(v === true)} className="mt-1" />
             <span>{t('agree')}</span>
           </label>
           {sign.error && (
@@ -123,7 +123,7 @@ export function SignFlow({ token }: { token: string }) {
             <Button size="lg" disabled={!agree} loading={sign.isPending} onClick={() => sign.mutate()} data-testid="confirm-sign">
               {t('confirm')}
             </Button>
-            <Button variant="link" className="text-muted-foreground" onClick={() => setDeclining((d) => !d)}>
+            <Button variant="ghost" className="text-text-muted" onClick={() => setDeclining((d) => !d)} aria-expanded={declining}>
               {t('decline')}
             </Button>
           </div>
@@ -145,10 +145,10 @@ export function SignFlow({ token }: { token: string }) {
 function EndState({ icon, title, text, testId }: { icon: React.ReactNode; title: string; text: string; testId: string }) {
   return (
     <Card data-testid={testId}>
-      <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-        {icon}
+      <CardContent className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-muted">{icon}</span>
         <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">{text}</p>
+        <p className="max-w-sm text-base text-text-muted">{text}</p>
       </CardContent>
     </Card>
   );

@@ -26,7 +26,7 @@ export function SharedFieldsForm({ fields, values, onSubmit, formId }: { fields:
   if (fields.length === 0) {
     return (
       <form id={formId} onSubmit={submit}>
-        <p className="text-sm text-muted-foreground">{t('none')}</p>
+        <p className="text-sm text-text-muted">{t('none')}</p>
       </form>
     );
   }
@@ -38,13 +38,13 @@ export function SharedFieldsForm({ fields, values, onSubmit, formId }: { fields:
         return (
           <div key={f.key} className="flex flex-col gap-1.5">
             <Label htmlFor={`shared-${name}`}>
-              {f.label} {f.required && <span className="text-destructive">*</span>}
+              {f.label} {f.required && <span className="text-danger-fg">*</span>}
             </Label>
             <Input id={`shared-${name}`} type={inputType(f.type)} inputMode={inputMode(f.type)} aria-invalid={!!error} {...form.register(name)} />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-text-muted">
               <code>{`{{${f.key}}}`}</code> · {tType(f.type)}
             </span>
-            {error && <p className="text-xs text-destructive">{t(`error.${error}`)}</p>}
+            {error && <p className="text-xs text-danger-fg">{t(`error.${error}`)}</p>}
           </div>
         );
       })}

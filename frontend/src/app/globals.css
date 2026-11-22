@@ -1,54 +1,241 @@
 @import 'tailwindcss';
 
-/* shadcn/ui-style design tokens (light theme). */
+/* Dark mode = class="dark" on <html> (set by next-themes before first paint). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens — see docs/UI-REDESIGN.md (contrast of every pair measured for both themes).
+ * Components use ONLY these tokens (no Tailwind palette colours, no literal colours).
+ *
+ * The Academy's brand colour lives in ONE place: --brand. Every accent shade in both themes is derived from it,
+ * so a new brand colour is a one-line change (re-run the axe tests afterwards: they check contrast).
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.21 0.02 265);
-  --card: oklch(1 0 0);
-  --muted: oklch(0.97 0.005 265);
-  --muted-foreground: oklch(0.5 0.02 265);
-  --border: oklch(0.92 0.01 265);
-  --input: oklch(0.88 0.01 265);
-  --primary: oklch(0.42 0.13 255);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.01 265);
-  --secondary-foreground: oklch(0.25 0.02 265);
-  --accent: oklch(0.95 0.02 255);
-  --destructive: oklch(0.56 0.21 25);
-  --success: oklch(0.55 0.14 150);
-  --warning: oklch(0.72 0.15 75);
-  --ring: oklch(0.55 0.13 255);
-  --radius: 0.5rem;
+  --brand: #2c5a96;
+
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-muted: #f0f2f5;
+  --border: #e0e4ea;
+  --border-strong: #858f9e;
+  --text: #1c2430;
+  --text-muted: #576170;
+
+  --accent: var(--brand);
+  --accent-hover: color-mix(in oklab, var(--brand) 84%, black);
+  --accent-fg: #ffffff;
+  --accent-soft: color-mix(in oklab, var(--brand) 11%, white);
+  --accent-text: color-mix(in oklab, var(--brand) 88%, black);
+
+  --neutral-fg: #4a5361;
+  --neutral-bg: #eceef2;
+  --info-fg: #1e5f86;
+  --info-bg: #e2eff6;
+  --violet-fg: #5a3e99;
+  --violet-bg: #eee9f8;
+  --success-fg: #1b6b42;
+  --success-bg: #e3f2e9;
+  --warning-fg: #7a4f00;
+  --warning-bg: #fbefd5;
+  --danger-fg: #a3222a;
+  --danger-bg: #fbe8e9;
+  --danger-solid: #b4262e;
+  --danger-solid-fg: #ffffff;
+
+  --diff-removed-fg: #8a1c1c;
+  --diff-removed-bg: #fce1e1;
+  --diff-added-fg: #135a33;
+  --diff-added-bg: #d9f1e2;
+
+  --focus: #2f6fd0;
+  --paper: #ffffff; /* PDF pages stay white in both themes */
+  --overlay: rgb(16 20 26 / 0.45);
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-md: 0 8px 24px rgb(16 24 40 / 0.12);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #16191e; /* soft dark grey, not black */
+  --surface: #1d2128;
+  --surface-muted: #242a32;
+  --border: #2f353f;
+  --border-strong: #6b7482;
+  --text: #e2e5ea; /* not pure white */
+  --text-muted: #a3abb7;
+
+  /* lighter, less saturated accent derived from the same brand colour */
+  --accent: color-mix(in oklab, var(--brand) 62%, #e8edf4);
+  --accent-hover: color-mix(in oklab, var(--brand) 52%, #e8edf4);
+  --accent-fg: #0f151e;
+  --accent-soft: color-mix(in oklab, var(--brand) 34%, #1d2128);
+  --accent-text: color-mix(in oklab, var(--brand) 38%, #eef2f8);
+
+  --neutral-fg: #b9c0ca;
+  --neutral-bg: #2a3038;
+  --info-fg: #8cc6de;
+  --info-bg: #1c3340;
+  --violet-fg: #c3b2ec;
+  --violet-bg: #2e2843;
+  --success-fg: #8fd0aa;
+  --success-bg: #1c3528;
+  --warning-fg: #e6be6e;
+  --warning-bg: #3a2f16;
+  --danger-fg: #f19c9c;
+  --danger-bg: #3e2125;
+  --danger-solid: #d45c61;
+  --danger-solid-fg: #0f151e;
+
+  --diff-removed-fg: #f6c3c3;
+  --diff-removed-bg: #4b2328;
+  --diff-added-fg: #bde7cb;
+  --diff-added-bg: #1e3c2b;
+
+  --focus: #8cb4ee;
+  --overlay: rgb(0 0 0 / 0.6);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 8px 28px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
+  /* surfaces & text */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-border: var(--border);
-  --color-input: var(--input);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-paper: var(--paper);
+  --color-overlay: var(--overlay);
+  --color-focus: var(--focus);
+  /* accent */
   --color-accent: var(--accent);
-  --color-destructive: var(--destructive);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-ring: var(--ring);
-  --radius-md: var(--radius);
-  --font-sans: 'Noto Sans Armenian', 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  /* tones */
+  --color-neutral-fg: var(--neutral-fg);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-info-fg: var(--info-fg);
+  --color-info-bg: var(--info-bg);
+  --color-violet-fg: var(--violet-fg);
+  --color-violet-bg: var(--violet-bg);
+  --color-success-fg: var(--success-fg);
+  --color-success-bg: var(--success-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-solid-fg: var(--danger-solid-fg);
+  --color-diff-removed-fg: var(--diff-removed-fg);
+  --color-diff-removed-bg: var(--diff-removed-bg);
+  --color-diff-added-fg: var(--diff-added-fg);
+  --color-diff-added-bg: var(--diff-added-bg);
+
+  /* typography: Noto Sans (Latin + Cyrillic) + Noto Sans Armenian, self-hosted via next/font */
+  --font-sans: var(--font-noto), var(--font-noto-armenian), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* type scale (body 15px; Armenian is dense, 14px is tiring) */
+  --text-xs: 0.8125rem; /* 13px: badges, captions */
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem; /* 15px: body, tables, inputs */
+  --text-sm--line-height: 1.6;
+  --text-base: 1rem; /* 16px: signing page, phones' inputs */
+  --text-base--line-height: 1.6;
+  --text-lg: 1.125rem; /* 18px: card / dialog titles */
+  --text-lg--line-height: 1.45;
+  --text-xl: 1.375rem; /* 22px: page title on phones */
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.625rem; /* 26px: page title */
+  --text-2xl--line-height: 1.3;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
 }
 
 @layer base {
   * {
-    border-color: var(--color-border);
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
   }
   body {
-    background: var(--color-muted);
-    color: var(--color-foreground);
+    background: var(--bg);
+    color: var(--text);
     font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* one visible focus ring for every interactive element (keyboard only) */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--focus) 30%, transparent);
+  }
+  /* 16px inputs on phones: iOS doesn't zoom into the field */
+  @media (max-width: 639px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Short, subtle motion; none at all for people who ask for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@utility animate-fade-in {
+  animation: fade-in 140ms ease-out;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
   }
 }

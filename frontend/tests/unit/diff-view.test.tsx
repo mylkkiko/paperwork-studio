@@ -12,21 +12,24 @@ const spans = [
 ];
 
 describe('DiffText', () => {
-  it('old side: removed words struck through in red, added words hidden', () => {
+  // Colours are theme tokens (diff-removed / diff-added), readable in light and dark: assert the token, not a palette name.
+  it('old side: removed words struck through in the "removed" colour, added words hidden', () => {
     const { container } = renderWithProviders(<DiffText spans={spans} side="old" />);
     expect(container.textContent).toBe('Վճարումը կատարվում է 10 աշխատանքային օրվա ընթացքում։');
     const del = container.querySelector('del')!;
     expect(del).toHaveTextContent('10');
-    expect(del.className).toMatch(/red/);
+    expect(del.className).toMatch(/bg-diff-removed-bg/);
+    expect(del.className).toMatch(/text-diff-removed-fg/);
     expect(container.querySelector('ins')).toBeNull();
   });
 
-  it('new side: added words highlighted in green, removed words hidden', () => {
+  it('new side: added words highlighted in the "added" colour, removed words hidden', () => {
     const { container } = renderWithProviders(<DiffText spans={spans} side="new" />);
     expect(container.textContent).toBe('Վճարումը կատարվում է 5 աշխատանքային օրվա ընթացքում։');
     const ins = container.querySelector('ins')!;
     expect(ins).toHaveTextContent('5');
-    expect(ins.className).toMatch(/green/);
+    expect(ins.className).toMatch(/bg-diff-added-bg/);
+    expect(ins.className).toMatch(/text-diff-added-fg/);
     expect(container.querySelector('del')).toBeNull();
   });
 });
@@ -48,10 +51,10 @@ describe('ClauseRow', () => {
     expect(screen.getByText('Removed')).toBeInTheDocument();
   });
 
-  it('added clause: new text in green with an "Added" badge', () => {
+  it('added clause: new text in the "added" colour with an "Added" badge', () => {
     renderWithProviders(<ClauseRow change={change({ status: 'added', oldNumber: null, newNumber: '6.2', oldText: null, newText: 'Լուսանկարներ' })} />);
     expect(screen.getByText('Clause 6.2')).toBeInTheDocument();
-    expect(screen.getByText('Լուսանկարներ').className).toMatch(/green/);
+    expect(screen.getByText('Լուսանկարներ').className).toMatch(/text-diff-added-fg/);
     expect(screen.getByText('Added')).toBeInTheDocument();
   });
 

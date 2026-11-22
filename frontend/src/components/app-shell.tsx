@@ -4,13 +4,15 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { FileText, LayoutDashboard, LogOut, Menu, PenLine, Send, Settings2, Users, X } from 'lucide-react';
+import { ChevronDown, FileText, LayoutDashboard, LogOut, Menu, PenLine, Send, Settings2, Users, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { can } from '@/lib/roles';
 import type { Role } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LanguageSwitcher } from './language-switcher';
+import { ThemeToggle } from './theme-toggle';
 import { ForbiddenState, LoadingState } from './states';
 
 interface NavItem {
@@ -40,6 +42,28 @@ export function isRouteAllowed(pathname: string, role?: Role) {
   return !item || item.visible(role);
 }
 
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  const t = useTranslations('common');
+  return (
+    <Link href="/dashboard" className="flex items-center gap-2.5 whitespace-nowrap rounded-md font-semibold" aria-label={compact ? t('appName') : undefined}>
+      <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-fg" aria-hidden>
+        <FileText className="h-4 w-4" />
+      </span>
+      {/* narrow phones: icon only, so the header controls fit */}
+      <span className={compact ? 'hidden min-[420px]:inline' : undefined}>{t('appName')}</span>
+    </Link>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const t = useTranslations();
@@ -61,17 +85,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const nav = (
-    <nav className="flex flex-col gap-1" aria-label={t('nav.main')}>
+    <nav className="flex flex-col gap-0.5" aria-label={t('nav.main')}>
       {visibleNav(user.role).map(({ href, key, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/');
         return (
           <Link
             key={href}
             href={href}
-            className={cn('flex items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent', active && 'bg-accent font-medium text-primary')}
+            className={cn(
+              'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-text-muted transition-colors hover:bg-surface-muted hover:text-text',
+              active && 'bg-accent-soft font-medium text-accent-text hover:bg-accent-soft hover:text-accent-text',
+            )}
             aria-current={active ? 'page' : undefined}
           >
-            <Icon className="h-4 w-4" aria-hidden />
+            <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
             {t(`nav.${key}`)}
           </Link>
         );
@@ -79,50 +106,88 @@ export function AppShell({ children }: { children: ReactNode }) {
     </nav>
   );
 
-  const userBox = (
-    <div className="flex flex-col gap-3 border-t pt-4">
-      <div className="text-sm">
-        <div className="font-medium" data-testid="current-user">{user.name}</div>
-        <div className="text-xs text-muted-foreground">{t(`roles.${user.role}`)}</div>
-      </div>
-      <LanguageSwitcher />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          logout();
-          router.replace('/login');
-        }}
-      >
-        <LogOut /> {t('nav.logout')}
-      </Button>
-    </div>
-  );
+  const signOut = () => {
+    logout();
+    router.replace('/login');
+  };
 
   return (
-    <div className="min-h-screen md:flex">
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background px-4 py-3 md:hidden">
-        <Link href="/dashboard" className="font-semibold">{t('common.appName')}</Link>
-        <Button variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={t('nav.menu')} aria-expanded={open}>
-          {open ? <X /> : <Menu />}
+    <div className="min-h-dvh md:pl-64">
+      {/* Desktop sidebar: navigation only, full height */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-6 border-r bg-surface px-3 py-4 md:flex">
+        <div className="px-2">
+          <Brand />
+        </div>
+        {nav}
+      </aside>
+
+      {/* Header: context on the left, settings and account on the right */}
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-surface/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:px-6">
+        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(true)} aria-label={t('nav.menu')} aria-expanded={open}>
+          <Menu />
         </Button>
+        <div className="md:hidden">
+          <Brand compact />
+        </div>
+        <div className="ml-auto flex items-center gap-1">
+          <LanguageSwitcher compact />
+          <ThemeToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              {/* accessible name = the visible name and role (WCAG 2.5.3); phones show only the avatar, so it gets a label */}
+              <Button variant="ghost" className="h-10 gap-2 px-2" title={t('nav.account')}>
+                <span className="sr-only sm:hidden">{`${t('nav.account')}: ${user.name}`}</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-text" aria-hidden>
+                  {initials(user.name)}
+                </span>
+                <span className="hidden max-w-48 flex-col items-start text-left leading-tight sm:flex">
+                  <span className="truncate text-sm font-medium" data-testid="current-user">
+                    {user.name}
+                  </span>
+                  <span className="truncate text-xs text-text-muted">{t(`roles.${user.role}`)}</span>
+                </span>
+                <ChevronDown className="hidden text-text-muted sm:block" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-56">
+              <DropdownMenuLabel className="text-sm text-text">
+                <div className="font-medium">{user.name}</div>
+                <div className="text-xs font-normal text-text-muted">{user.email}</div>
+                <div className="text-xs font-normal text-text-muted">{t(`roles.${user.role}`)}</div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={signOut}>
+                <LogOut aria-hidden /> {t('nav.logout')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
+
+      {/* Phone navigation: sheet from the left */}
       {open && (
-        <div className="border-b bg-background p-4 md:hidden">
-          {nav}
-          <div className="mt-4">{userBox}</div>
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label={t('nav.menu')}>
+          <div className="absolute inset-0 bg-overlay animate-fade-in" onClick={() => setOpen(false)} />
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-6 border-r bg-surface px-3 py-4 shadow-md animate-fade-in">
+            <div className="flex items-center justify-between px-2">
+              <Brand />
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label={t('common.close')}>
+                <X />
+              </Button>
+            </div>
+            {nav}
+            <div className="mt-auto border-t px-2 pt-4">
+              <Button variant="secondary" className="w-full" onClick={signOut}>
+                <LogOut /> {t('nav.logout')}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col justify-between border-r bg-background p-4 md:flex">
-        <div>
-          <Link href="/dashboard" className="mb-6 block px-3 text-lg font-semibold">{t('common.appName')}</Link>
-          {nav}
-        </div>
-        {userBox}
-      </aside>
-      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{isRouteAllowed(pathname, user.role) ? children : <ForbiddenState />}</main>
+
+      <main className="mx-auto w-full min-w-0 max-w-[1280px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        {isRouteAllowed(pathname, user.role) ? children : <ForbiddenState />}
+      </main>
     </div>
   );
 }

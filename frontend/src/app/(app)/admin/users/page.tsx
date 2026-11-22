@@ -79,7 +79,7 @@ export default function UsersPage() {
                       </TD>
                       <TD>{u.email}</TD>
                       <TD>
-                        <Select aria-label={t('role')} className="h-8 w-40" value={u.role} disabled={self} onChange={(e) => update.mutate({ id: u.id, patch: { role: e.target.value as Role } })}>
+                        <Select aria-label={t('role')} className="h-9" wrapperClassName="w-44" value={u.role} disabled={self} onChange={(e) => update.mutate({ id: u.id, patch: { role: e.target.value as Role } })}>
                           {ROLES.map((r) => (
                             <option key={r} value={r}>
                               {tr(r)}
@@ -93,7 +93,7 @@ export default function UsersPage() {
                         </Button>
                         {!u.active && <Badge variant="destructive" className="ml-2">{t('inactive')}</Badge>}
                       </TD>
-                      <TD className="text-muted-foreground">{f.date(u.createdAt)}</TD>
+                      <TD className="text-text-muted">{f.date(u.createdAt)}</TD>
                       <TD className="text-right">
                         <Button size="sm" variant="ghost" onClick={() => setPasswordFor(u)}>
                           <KeyRound /> {t('setPassword')}
@@ -140,7 +140,7 @@ function CreateUserDialog({ open, onClose }: { open: boolean; onClose: () => voi
     create.reset();
     onClose();
   };
-  const err = (name: keyof Values) => form.formState.errors[name]?.message && <p className="text-xs text-destructive">{t(`error.${form.formState.errors[name]!.message}`)}</p>;
+  const err = (name: keyof Values) => form.formState.errors[name]?.message && <p className="text-xs text-danger-fg">{t(`error.${form.formState.errors[name]!.message}`)}</p>;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
@@ -212,7 +212,7 @@ function PasswordDialog({ user, onClose, onSave }: { user: User | null; onClose:
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="new-password">{t('password')}</Label>
           <Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          {password && !valid && <p className="text-xs text-destructive">{t('error.password')}</p>}
+          {password && !valid && <p className="text-xs text-danger-fg">{t('error.password')}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={close}>

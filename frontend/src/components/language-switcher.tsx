@@ -3,12 +3,17 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { Languages } from 'lucide-react';
+import { ChevronDown, Languages } from 'lucide-react';
 import { localeNames, locales, LOCALE_COOKIE, type Locale } from '@/i18n/config';
 import { cn } from '@/lib/utils';
 
-/** Stores the UI language in a cookie and re-renders server components with the new dictionary. */
-export function LanguageSwitcher({ className }: { className?: string }) {
+const SHORT: Record<Locale, string> = { hy: 'Հայ', en: 'Eng', ru: 'Рус' };
+
+/**
+ * Stores the UI language in a cookie and re-renders server components with the new dictionary.
+ * A native select keeps it keyboard/screen-reader friendly; `compact` shows a short code in the header.
+ */
+export function LanguageSwitcher({ className, compact = false }: { className?: string; compact?: boolean }) {
   const locale = useLocale() as Locale;
   const t = useTranslations('nav');
   const router = useRouter();
@@ -20,22 +25,22 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   };
 
   return (
-    <label className={cn('inline-flex items-center gap-1.5 text-sm', className)}>
-      <Languages className="h-4 w-4 text-muted-foreground" aria-hidden />
-      <span className="sr-only">{t('language')}</span>
+    <label className={cn('relative inline-flex h-10 items-center rounded-md text-sm text-text transition-colors hover:bg-surface-muted', className)} title={t('language')}>
+      <Languages className="pointer-events-none absolute left-2.5 h-4 w-4 text-text-muted" aria-hidden />
       <select
         aria-label={t('language')}
-        className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+        className={cn('h-10 cursor-pointer appearance-none rounded-md bg-transparent pl-8 pr-7 text-sm', compact && 'w-24')}
         value={locale}
         disabled={pending}
         onChange={(e) => change(e.target.value as Locale)}
       >
         {locales.map((l) => (
           <option key={l} value={l}>
-            {localeNames[l]}
+            {compact ? SHORT[l] : localeNames[l]}
           </option>
         ))}
       </select>
+      <ChevronDown className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-text-muted" aria-hidden />
     </label>
   );
 }

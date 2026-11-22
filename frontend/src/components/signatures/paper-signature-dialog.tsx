@@ -64,7 +64,7 @@ export function PaperSignatureDialog({ doc, onClose }: { doc: DocumentRow | null
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="scan">{t('scan')}</Label>
             <FileInput id="scan" buttonLabel={tCommon('chooseFile')} emptyLabel={tCommon('noFileChosen')} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" aria-invalid={!!form.formState.errors.file} {...form.register('file')} />
-            {form.formState.errors.file && <p className="text-xs text-destructive">{t('fileInvalid')}</p>}
+            {form.formState.errors.file && <p className="text-xs text-danger-fg">{t('fileInvalid')}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="signedAt">{t('signedAt')}</Label>

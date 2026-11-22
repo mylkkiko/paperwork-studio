@@ -48,7 +48,7 @@ export default function MergeFieldsPage() {
         }
       />
       <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden />
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-text-muted" aria-hidden />
         <Input className="pl-8" placeholder={t('search')} aria-label={t('search')} value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
       <QueryState query={query}>
@@ -138,12 +138,12 @@ function FieldDialog({ field, onClose }: { field: MergeField | 'new' | null; onC
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="mf-key">{t('key')}</Label>
             <Input id="mf-key" placeholder="contract.discount" disabled={!isNew} {...form.register('key')} />
-            {form.formState.errors.key && <p className="text-xs text-destructive">{t('keyInvalid')}</p>}
+            {form.formState.errors.key && <p className="text-xs text-danger-fg">{t('keyInvalid')}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="mf-label">{t('label')}</Label>
             <Input id="mf-label" lang="hy" {...form.register('label')} />
-            {form.formState.errors.label && <p className="text-xs text-destructive">{tCommon('required')}</p>}
+            {form.formState.errors.label && <p className="text-xs text-danger-fg">{tCommon('required')}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">

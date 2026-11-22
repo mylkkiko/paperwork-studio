@@ -80,6 +80,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     await page.goto('/templates');
     await page.getByRole('button', { name: 'Վերբեռնել ձևանմուշ' }).click();
     await page.getByRole('button', { name: 'Վերբեռնել', exact: true }).click();
+    await page.waitForTimeout(400); // let the open animation finish
     await shot('23-upload-dialog', false);
     await page.keyboard.press('Escape');
     await page.goto(`/templates/${templateId}`);
@@ -96,6 +97,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     await shot('27-compare-all');
     await page.goto(`/templates/${templateId}`);
     await page.getByTestId('version-row-2').getByRole('button', { name: 'Հրապարակել' }).click();
+    await page.waitForTimeout(400); // let the open animation finish
     await shot('28-publish-dialog', false);
     await page.keyboard.press('Escape');
     await page.goto('/signatures');
@@ -138,6 +140,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     await shot('38-signatures-older-empty');
     await page.goto(`/signatures?templateId=${templateId}`);
     await page.getByTestId('sig-row-stu-005').first().getByRole('button', { name: 'Թղթային' }).click();
+    await page.waitForTimeout(400); // let the open animation finish
     await shot('39-paper-dialog', false);
     await page.keyboard.press('Escape');
     await ctx.clearCookies();
@@ -149,6 +152,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     await expect(page.getByText('admin@academy.am')).toBeVisible();
     await shot('40-admin-users');
     await page.getByRole('button', { name: 'Նոր օգտատեր' }).click();
+    await page.waitForTimeout(400); // let the open animation finish
     await shot('41-admin-user-dialog', false);
     await page.keyboard.press('Escape');
     await page.goto('/admin/merge-fields');
@@ -157,7 +161,8 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     if (device === 'phone') {
       await page.goto('/dashboard');
       await page.getByRole('button', { name: 'Ընտրացանկ' }).click();
-      await shot('43-phone-menu', false);
+      await page.waitForTimeout(400); // let the open animation finish
+    await shot('43-phone-menu', false);
     }
     await ctx.close();
   });

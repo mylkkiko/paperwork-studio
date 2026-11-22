@@ -39,10 +39,13 @@ export function TemplateStep({ state, onChange }: { state: WizardState; onChange
                       commonValues: {},
                     })
                   }
-                  className={cn('rounded-lg border bg-background p-4 text-left shadow-sm transition hover:border-primary/50', selected && 'border-primary ring-2 ring-primary/30')}
+                  className={cn(
+                    'flex flex-col gap-1 rounded-lg border bg-surface p-4 text-left shadow-sm transition-colors hover:border-accent/50 hover:bg-surface-muted',
+                    selected && 'border-accent bg-accent-soft ring-1 ring-accent hover:bg-accent-soft',
+                  )}
                 >
-                  <div className="font-medium">{tpl.title}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
+                  <div className="font-medium [overflow-wrap:anywhere]">{tpl.title}</div>
+                  <div className="mt-1 text-sm text-text-muted">
                     {tc(tpl.category)} · {t('publishedVersion', { version: tpl.publishedVersion!.versionNumber })}
                   </div>
                 </button>

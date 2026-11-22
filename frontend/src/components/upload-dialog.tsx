@@ -107,7 +107,7 @@ export function UploadTemplateDialog({ open, onOpenChange, templateId }: { open:
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="tpl-title">{t('name')}</Label>
                   <Input id="tpl-title" aria-invalid={!!form.formState.errors.title} {...form.register('title')} />
-                  {form.formState.errors.title && <p className="text-xs text-destructive">{tCommon('required')}</p>}
+                  {form.formState.errors.title && <p className="text-xs text-danger-fg">{tCommon('required')}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="tpl-category">{t('category')}</Label>
@@ -124,7 +124,7 @@ export function UploadTemplateDialog({ open, onOpenChange, templateId }: { open:
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="tpl-file">{t('file')}</Label>
               <FileInput id="tpl-file" buttonLabel={tCommon('chooseFile')} emptyLabel={tCommon('noFileChosen')} accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-invalid={!!form.formState.errors.file} {...form.register('file')} />
-              {form.formState.errors.file && <p className="text-xs text-destructive">{t('fileInvalid')}</p>}
+              {form.formState.errors.file && <p className="text-xs text-danger-fg">{t('fileInvalid')}</p>}
             </div>
             {mutation.error && (
               <Alert variant="destructive">

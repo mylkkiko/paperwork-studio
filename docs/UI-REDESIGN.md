@@ -301,3 +301,34 @@ text **plus a small icon**, so status is never conveyed by colour alone.
 - Documents, emails, generated PDFs/DOCX/ZIP/CSV/XLSX untouched.
 - Native date-picker popups are drawn by the browser (they will follow `color-scheme`, but their language follows
   the browser).
+
+---
+
+## 11. Implementation (step 2) — status
+
+Implemented as proposed; screenshots of every screen in light and dark, desktop and phone:
+[docs/screenshots/ui-v2/](screenshots/ui-v2/) (122 images, `{light|dark}-{desktop|phone}-NN-screen.png`, produced by
+`AUDIT_DIR=ui-v2 AUDIT_THEME=dark npx playwright test --config playwright.screenshots.config.ts e2e/audit.spec.ts`).
+
+| Area | Where |
+| --- | --- |
+| Tokens, both themes, type scale, focus ring, reduced motion | `frontend/src/app/globals.css` |
+| **Brand colour (one place)** | `--brand` in `globals.css`; every accent shade in both themes is derived with `color-mix()` |
+| Theme (next-themes, class strategy, System default, no flash) | `components/providers.tsx`, `components/theme-toggle.tsx` |
+| Header with language, theme and account menus; sidebar = navigation | `components/app-shell.tsx` |
+| Buttons, inputs/selects, badges (tones), tables (sticky header/first column), dialogs (sheet on phones), skeletons, empty states | `components/ui/*`, `components/states.tsx` |
+| Status badges (tone + icon) | `components/status-badge.tsx` |
+| Precheck as cards on phones; stepper; signatures filters collapse; column order | `components/generate/*`, `components/signatures/*`, `app/(app)/signatures/page.tsx` |
+| Fonts | Noto Sans + Noto Sans Armenian via `next/font` (self-hosted) |
+
+Tests added: `e2e/theme.spec.ts` (toggle, persistence, System ↔ OS, no flash, paper stays white),
+`e2e/a11y.spec.ts` (axe, WCAG 2.1 A/AA incl. colour contrast, 8 screens × 2 themes, 0 serious/critical),
+phone overflow check in hy/ru/en (`e2e/languages.spec.ts`).
+
+Known leftovers:
+- Native `<select>` option lists and the date picker are drawn by the browser (they follow the theme via
+  `color-scheme`, but their look and the date format are the browser's).
+- Full-page screenshots show the fixed sidebar only for the first viewport height (capture artifact; in the browser it
+  always fills the window).
+- In headless screenshots the PDF frame is empty (Chromium headless doesn't render PDFs in frames); real browsers show
+  the page on the white `--paper` background.

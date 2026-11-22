@@ -57,7 +57,7 @@ function ComparePageInner() {
 
   return (
     <>
-      <Link href={`/templates/${id}`} className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href={`/templates/${id}`} className="mb-3 inline-flex items-center gap-1 rounded-sm text-sm text-text-muted hover:text-text">
         <ArrowLeft className="h-4 w-4" /> {tpl.title}
       </Link>
       <PageHeader title={t('title')} description={tpl.title} />
@@ -66,7 +66,7 @@ function ComparePageInner() {
         <EmptyState>{t('needTwo')}</EmptyState>
       ) : (
         <>
-          <Card className="mb-4 grid gap-3 p-3 sm:grid-cols-2">
+          <Card className="mb-4 grid gap-3 p-4 sm:grid-cols-2">
             {(['from', 'to'] as const).map((key) => (
               <div key={key} className="flex flex-col gap-1.5">
                 <Label htmlFor={`v-${key}`}>{t(key)}</Label>
@@ -102,7 +102,7 @@ function ComparePageInner() {
                   {t('showUnchanged')}
                 </label>
               </CardHeader>
-              <div className="hidden grid-cols-2 gap-3 border-y bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground md:grid">
+              <div className="hidden grid-cols-2 gap-6 border-y bg-surface-muted py-2.5 pl-5 pr-4 text-xs font-medium text-text-muted md:grid">
                 <span>{t('oldColumn', { version: versions.find((v) => v.id === from)?.versionNumber ?? '' })}</span>
                 <span>{t('newColumn', { version: toVersion?.versionNumber ?? '' })}</span>
               </div>
@@ -113,15 +113,15 @@ function ComparePageInner() {
                     <ClauseRow key={i} change={c} />
                   ))}
                 {!showUnchanged && comparison.data!.changes.every((c) => c.status === 'unchanged' && !c.moved) && (
-                  <p className="p-6 text-center text-sm text-muted-foreground">{t('identical')}</p>
+                  <p className="p-6 text-center text-sm text-text-muted">{t('identical')}</p>
                 )}
               </div>
-              <CardContent className="flex flex-wrap gap-4 border-t py-3 text-xs text-muted-foreground sm:py-3">
+              <CardContent className="flex flex-wrap items-center gap-4 border-t py-3 text-xs text-text-muted sm:py-3" aria-label={t('legend')}>
                 <span>
-                  <del className="rounded bg-red-100 px-1 text-red-800">{t('legendRemoved')}</del>
+                  <del className="rounded-sm bg-diff-removed-bg px-1 text-diff-removed-fg">{t('legendRemoved')}</del>
                 </span>
                 <span>
-                  <ins className="rounded bg-green-100 px-1 text-green-800 no-underline">{t('legendAdded')}</ins>
+                  <ins className="rounded-sm bg-diff-added-bg px-1 font-medium text-diff-added-fg no-underline">{t('legendAdded')}</ins>
                 </span>
               </CardContent>
             </Card>
@@ -192,13 +192,13 @@ function SummaryEditor({ templateId, versionId, autoSummary }: { templateId: str
           <CardDescription>{editable ? t('summaryEditable') : t('summaryReadonly')}</CardDescription>
         </div>
         {editable && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full gap-2 sm:w-auto">
             {v.comparedToId && (
-              <Button variant="outline" size="sm" onClick={() => regenerate.mutate()} loading={regenerate.isPending}>
-                <RotateCcw /> {t('regenerate')}
+              <Button variant="ghost" size="sm" onClick={() => regenerate.mutate()} loading={regenerate.isPending} aria-label={t('regenerate')} title={t('regenerate')}>
+                <RotateCcw /> <span className="hidden md:inline">{t('regenerate')}</span>
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => save.mutate()} loading={save.isPending} disabled={text === (v.changeSummary ?? '')}>
+            <Button variant="secondary" size="sm" className="ml-auto sm:ml-0" onClick={() => save.mutate()} loading={save.isPending} disabled={text === (v.changeSummary ?? '')}>
               <Save /> {tCommon('save')}
             </Button>
             <Button size="sm" onClick={() => publish.mutate()} loading={publish.isPending}>
@@ -213,7 +213,7 @@ function SummaryEditor({ templateId, versionId, autoSummary }: { templateId: str
           {editable ? (
             <Textarea id="summary" lang="hy" rows={Math.max(4, text.split('\n').length + 1)} value={text} onChange={(e) => setText(e.target.value)} />
           ) : (
-            <ul id="summary" lang="hy" className="list-disc space-y-1 rounded-md bg-muted/50 p-3 pl-7 text-sm">
+            <ul id="summary" lang="hy" className="list-disc space-y-1.5 rounded-md bg-surface-muted p-3 pl-7 text-sm leading-relaxed">
               {(v.changeSummary ?? '').split('\n').filter(Boolean).map((l, i) => (
                 <li key={i}>{l}</li>
               ))}
@@ -223,7 +223,7 @@ function SummaryEditor({ templateId, versionId, autoSummary }: { templateId: str
         {locale !== 'hy' && autoSummary && (
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t('summaryAuto')}</span>
-            <ul className="list-disc space-y-1 rounded-md bg-muted/50 p-3 pl-7 text-sm" data-testid="auto-summary">
+            <ul className="list-disc space-y-1.5 rounded-md bg-surface-muted p-3 pl-7 text-sm leading-relaxed" data-testid="auto-summary">
               {autoSummary.map((l, i) => (
                 <li key={i}>{l}</li>
               ))}

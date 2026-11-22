@@ -86,18 +86,18 @@ export function RecipientsStep({ state, onChange }: { state: WizardState; onChan
       {(state.recipientType !== 'student' || state.groupId) && (
         <QueryState query={people}>
           {(list) => (
-            <div className="rounded-lg border bg-background">
-              <label className="flex items-center gap-3 border-b px-3 py-2 text-sm font-medium">
+            <div className="rounded-lg border bg-surface">
+              <label className="flex items-center gap-3 border-b bg-surface-muted px-4 py-3 text-sm font-medium">
                 <Checkbox checked={allSelected} onCheckedChange={(v) => onChange({ recipientIds: v === true ? allIds : [] })} aria-label={t('selectAll')} />
                 {t('selectedCount', { selected: state.recipientIds.length, total: list.length })}
               </label>
               <ul className="max-h-[420px] divide-y overflow-y-auto">
                 {list.map((p) => (
                   <li key={p.id}>
-                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-muted/40">
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-surface-muted/40">
                       <Checkbox checked={state.recipientIds.includes(p.id)} onCheckedChange={(v) => toggle(p.id, v === true)} />
-                      <span className="flex-1">{p.name}</span>
-                      <span className="text-xs text-muted-foreground">{p.detail}</span>
+                      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{p.name}</span>
+                      <span className="text-xs text-text-muted">{p.detail}</span>
                     </label>
                   </li>
                 ))}
