@@ -8,7 +8,8 @@ export async function loginAs(page: Page, role: 'admin' | 'editor' | 'coordinato
   await page.goto('/login');
   await page.getByRole('button', { name: `Մուտք որպես ${roleName}` }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByTestId('current-user').first()).toBeVisible();
+  // main content is visible at any viewport (the user name sits in the closed menu on phones)
+  await expect(page.locator('main h1')).toBeVisible();
 }
 
 export async function logout(page: Page) {

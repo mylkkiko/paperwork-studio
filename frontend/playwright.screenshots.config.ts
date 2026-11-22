@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 /** Screenshots of the main screens against the running Docker stack (docker compose up). */
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'screenshots.spec.ts',
+  testMatch: ['screenshots.spec.ts', 'audit.spec.ts'],
   timeout: 180_000,
   workers: 1,
   reporter: 'list',
