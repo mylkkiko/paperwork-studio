@@ -322,7 +322,8 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/BatchInput' } } } }
       responses:
         '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/Batch' } } } }
-        '422': { description: 'MISSING_DATA (details: missingCommon, recipients) or VERSION_NOT_PUBLISHED' }
+        '400': { description: All recipients are excluded }
+        '422': { description: 'MISSING_DATA (details: missingCommon, recipients), INVALID_VALUES (details: invalidValues) or VERSION_NOT_PUBLISHED' }
 
   /api/batches/{id}:
     get:
@@ -670,6 +671,10 @@ components:
         ready: { type: boolean }
         commonFields: { type: array, items: { type: object, properties: { key: { type: string }, label: { type: string }, type: { type: string }, required: { type: boolean }, value: {} } } }
         missingCommon: { type: array, items: { $ref: '#/components/schemas/MissingField' } }
+        invalidValues:
+          type: array
+          description: Typed values that don't match their field type (e.g. "someday" for a date). recipientId null = shared value.
+          items: { type: object, properties: { recipientId: { type: string, nullable: true }, key: { type: string }, value: {} } }
         recipients:
           type: array
           items:

@@ -75,7 +75,8 @@ npm run dev            # http://localhost:4000
 | `npm run inspect:docx -- file.docx` | Print a template's text, fields and clause numbers |
 | `npx tsx scripts/try-compare.ts a.docx b.docx` | Compare two templates and print the summary |
 | `./scripts/walkthrough.sh` | End-to-end curl walkthrough (below) |
-| `npm test` | Test suite (Phase 2) |
+| `npm test` | Full test suite (Jest + Supertest) |
+| `npm run test:coverage` | Same, with coverage report (`coverage/index.html`); fails below 80% lines on `src/services` |
 
 ### Environment variables
 
@@ -98,6 +99,34 @@ See [.env.example](.env.example) for defaults.
 | `REMINDER_CRON` | How often the reminder job runs (`0 * * * *` = hourly) |
 | `GENERATION_CONCURRENCY` | Parallel PDF conversions per batch (4) |
 | `SEED_ON_START` | Docker only: seed on container start |
+
+---
+
+## Tests
+
+```bash
+docker compose up -d postgres gotenberg   # test DB + real PDF conversion for the Armenian rendering tests
+cd backend && npm test
+```
+
+- Separate database `paperwork_test` (created by `docker/postgres-init.sql`, migrated automatically before the run).
+  Each test file truncates all tables first; files run one at a time.
+- No Redis or SMTP needed: generation runs in-process (`InlineGenerationQueue`) and emails go to an in-memory mailer.
+- Time is controlled with an injectable `FixedClock` (link expiry, reminder schedule), not real waiting.
+- Most tests use a fast fake PDF converter that records what would have been printed;
+  [test/armenian-pdf.test.ts](test/armenian-pdf.test.ts) uses the real Gotenberg and checks the extracted PDF text
+  (Armenian dates, `450 000 ֏`, ☐/☑, fonts) plus the 24-document timing.
+
+| File | Covers |
+| --- | --- |
+| `auth-roles` | login, tokens, every protected route × every role (401/403/allowed) |
+| `templates` | field extraction incl. split runs, unknown fields, upload warnings (incl. auto-numbering), version lifecycle and immutability, preview, delete |
+| `clauses-compare` | clause splitting, v1/v2 demo, renumbering fixture, word diff, summary rules |
+| `generation` | precheck, exclusions, invalid values, 24 documents, numbers, snapshots, ZIP/merged PDF, retry without duplicates, staff/partners |
+| `signing` | tokens (hash, once, wrong, expired, revoked), IP/UA, ☑ re-render, decline, paper scans, expiry never touches signed/declined, old + reminder links both valid |
+| `reminders` | schedule (day 2/5, no duplicates, late runs, restart on resend, configurable), manual reminders |
+| `resend-new-version` | S-6: manual values carried over, Core Engine read fresh, new version linked, summary in email |
+| `exports`, `admin`, `formatters`, `armenian-pdf` | table/CSV/XLSX, users + dictionary, Armenian formatting, real PDF rendering |
 
 ---
 

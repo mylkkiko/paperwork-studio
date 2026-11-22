@@ -3,7 +3,9 @@
     "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -12,7 +14,16 @@
     "outDir": "dist",
     "rootDir": ".",
     "sourceMap": true,
-    "types": ["node", "jest"]
+    "types": [
+      "node",
+      "jest"
+    ],
+    "isolatedModules": true
   },
-  "include": ["src", "prisma", "scripts", "test"]
+  "include": [
+    "src",
+    "prisma",
+    "scripts",
+    "test"
+  ]
 }
