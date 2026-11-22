@@ -117,6 +117,7 @@ describe('summary (V-4)', () => {
     const cmp = compareClauses(await clausesOf(seedFile('student_agreement_v1.docx')), await clausesOf(seedFile('student_agreement_v2.docx')));
     expect(await summary.generate(cmp, 'en')).toEqual(['Clause 3.2 removed', 'Clause 4.2: payment term changed from 10 to 5 days', 'Clause 6.2 added']);
     expect(await summary.generate(cmp, 'hy')).toEqual(['Կետ 3.2-ը հանվել է', 'Կետ 4.2․ վճարման ժամկետը փոխվել է՝ 10 → 5 օր', 'Կետ 6.2-ն ավելացվել է']);
+    expect(await summary.generate(cmp, 'ru')).toEqual(['Пункт 3.2 удалён', 'Пункт 4.2: срок оплаты изменился с 10 на 5 (дни)', 'Пункт 6.2 добавлен']);
   });
 
   it('renumbering summary says "moved, content unchanged"', async () => {

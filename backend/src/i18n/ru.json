@@ -1,0 +1,49 @@
+{
+  "signature": {
+    "unsigned": "☐  Подпись: ____________",
+    "signedOnline": "☑  Подтверждено онлайн: {date}",
+    "signedPaper": "☑  Подписано на бумаге: {date}"
+  },
+  "summary": {
+    "preamble": "Преамбула",
+    "clause": "Пункт {number}",
+    "added": "{clause} добавлен",
+    "removed": "{clause} удалён",
+    "moved": "{clause} перемещён ({from} → {to}), содержание не изменилось",
+    "movedChanged": "{clause} перемещён ({from} → {to}) и изменён",
+    "numberChanged": "{clause}: число изменилось с {old} на {new}",
+    "termChanged": "{clause}: срок изменился с {old} на {new} ({unit})",
+    "paymentTermChanged": "{clause}: срок оплаты изменился с {old} на {new} ({unit})",
+    "amountChanged": "{clause}: сумма изменилась с {old} на {new}",
+    "dateChanged": "{clause}: дата изменилась с {old} на {new}",
+    "textChanged": "{clause}: изменена формулировка",
+    "noChanges": "Изменений нет",
+    "unit": { "day": "дни", "month": "месяцы", "year": "годы", "hour": "часы" }
+  },
+  "export": {
+    "recipient": "Получатель",
+    "email": "Эл. почта",
+    "document": "Документ",
+    "template": "Шаблон",
+    "version": "Версия",
+    "status": "Статус",
+    "method": "Способ",
+    "sentAt": "Отправлено",
+    "signedAt": "Подписано",
+    "reminders": "Напоминания"
+  },
+  "status": {
+    "created": "Создан",
+    "sent": "Отправлен",
+    "viewed": "Просмотрен",
+    "signed": "Подписан",
+    "declined": "Отклонён",
+    "expired": "Просрочен"
+  },
+  "method": { "online": "Онлайн", "paper": "На бумаге" },
+  "warnings": {
+    "UNKNOWN_FIELD": "Неизвестное поле: {field}",
+    "CLAUSES_NOT_DETECTED": "Пункты не распознаны — преобразуйте нумерацию в обычный текст",
+    "MISSING_SIGNATURE_FIELD": "В шаблоне нет поля {{signature.checkbox}}"
+  }
+}

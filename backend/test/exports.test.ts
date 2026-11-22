@@ -68,6 +68,12 @@ describe('exports (S-7)', () => {
     expect(text).toContain(',Signed,Online,');
   });
 
+  it('CSV in Russian', async () => {
+    const text = ((await download('format=csv&locale=ru')).body as Buffer).toString('utf8');
+    expect(text.split('\r\n')[0]).toBe('\uFEFFПолучатель,Эл. почта,Документ,Шаблон,Версия,Статус,Способ,Отправлено,Подписано,Напоминания');
+    expect(text).toContain(',Подписан,Онлайн,');
+  });
+
   it('CSV escapes commas and quotes', async () => {
     await prisma.document.updateMany({ where: { recipientId: 'stu-003' }, data: { recipientName: 'Մարիամ "Մարո", Պետրոսյան' } });
     const text = ((await download('format=csv')).body as Buffer).toString('utf8');

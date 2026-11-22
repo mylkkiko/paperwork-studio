@@ -1,12 +1,14 @@
 import hy from './hy.json';
 import en from './en.json';
+import ru from './ru.json';
 
-export type Locale = 'hy' | 'en';
+/** UI locales. Documents and emails are always Armenian (DEFAULT_LOCALE); ru has no email texts. */
+export type Locale = 'hy' | 'en' | 'ru';
 export const DEFAULT_LOCALE: Locale = 'hy';
-const dictionaries: Record<Locale, unknown> = { hy, en };
+const dictionaries: Record<Locale, unknown> = { hy, en, ru };
 
 export function isLocale(x: unknown): x is Locale {
-  return x === 'hy' || x === 'en';
+  return x === 'hy' || x === 'en' || x === 'ru';
 }
 
 /**

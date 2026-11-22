@@ -247,7 +247,7 @@ paths:
       tags: [templates]
       summary: Version details (fields annotated with dictionary info, clauses, stored comparison and summary)
       parameters:
-        - { name: locale, in: query, description: "`en` also returns `generatedSummary` in English", schema: { type: string, enum: [hy, en] } }
+        - { name: locale, in: query, description: "`en`/`ru` also returns `generatedSummary` in that language", schema: { type: string, enum: [hy, en, ru] } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TemplateVersion' } } } }
     patch:
@@ -286,7 +286,7 @@ paths:
         - { $ref: '#/components/parameters/id' }
         - { name: from, in: query, required: true, schema: { type: string, format: uuid } }
         - { name: to, in: query, required: true, schema: { type: string, format: uuid } }
-        - { name: locale, in: query, schema: { type: string, enum: [hy, en] } }
+        - { name: locale, in: query, schema: { type: string, enum: [hy, en, ru] } }
       responses:
         '200':
           description: OK
@@ -459,7 +459,7 @@ paths:
       summary: Export the table (same filters) as CSV or XLSX
       parameters:
         - { name: format, in: query, schema: { type: string, enum: [csv, xlsx], default: csv } }
-        - { name: locale, in: query, schema: { type: string, enum: [hy, en], default: hy } }
+        - { name: locale, in: query, schema: { type: string, enum: [hy, en, ru], default: hy } }
         - { name: groupId, in: query, schema: { type: string } }
         - { name: templateId, in: query, schema: { type: string } }
         - { name: olderVersion, in: query, schema: { type: boolean } }
