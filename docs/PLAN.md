@@ -322,3 +322,20 @@ Changes vs. the plan:
 | A reminder recorded at exactly the resend instant counted towards the new send's schedule. | Only reminders strictly after the latest send count. |
 | S-6 picked "the version the recipient signed" by creation time; with equal timestamps it could choose an older version. | Prefer the highest signed version number. |
 | A replaced clause (same number, different text) was listed "added" before "removed". | Removed clauses are emitted before an added clause at the same position. |
+
+## 10. Phase 3 (frontend) decisions
+
+- **Next.js 15.5** (latest 15.x) rather than 16: stable App Router + next-intl integration; nothing in the spec needs 16.
+- **shadcn/ui** components are written in the repo (`src/components/ui`, Radix + Tailwind + CVA), the way the shadcn
+  CLI would generate them, instead of running the generator.
+- **UI language from a cookie**, not the URL, so email links `/sign/<token>` work unchanged. Armenian by default.
+- **Russian (ru)** added as a third UI language (product owner request). The backend got a `ru` dictionary too, so
+  generated summaries, upload warnings, statuses and CSV/XLSX headers are available in Russian. Emails, documents and
+  the stored (editable) change summary stay Armenian.
+- **Demo logins** with one-click buttons on the login page when `NEXT_PUBLIC_APP_ENV` is not `production`
+  (docker-compose builds with `test`).
+- **Dates in Armenian UI** are formatted in code (browsers lack Armenian month data and print "2026 M11 22").
+- **Mobile signing**: phones get an "Open document" button instead of an inline PDF frame (mobile browsers render
+  an empty frame).
+- **Dependency pin**: Next 15.5 and next-intl require different `@swc/helpers` versions; pinned to 0.5.17 via npm
+  `overrides`, and the folder is added to the standalone trace (`outputFileTracingIncludes`).

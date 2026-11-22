@@ -7,9 +7,9 @@ group, compare template versions clause by clause with a plain-language summary,
 ```
 paperwork-studio/
   backend/            Node.js + Express + TypeScript REST API   -> backend/README.md
-  frontend/           Next.js app (Phase 3)
+  frontend/           Next.js app                               -> frontend/README.md
   docker/             Gotenberg font config, Postgres init (test database)
-  docker-compose.yml  postgres, redis, gotenberg, mailpit, backend (+ frontend in Phase 3)
+  docker-compose.yml  postgres, redis, gotenberg, mailpit, backend, frontend
   docs/PLAN.md        plan, risks, assumptions
 ```
 
@@ -21,9 +21,12 @@ docker compose up --build
 
 | What | URL |
 | --- | --- |
+| **App** | **http://localhost:3100** |
 | API | http://localhost:4000/api |
-| Mailpit (all outgoing emails) | http://localhost:8025 |
-| Frontend | http://localhost:3100 (Phase 3) |
+| Mailpit (all outgoing emails, signing links) | http://localhost:8025 |
+
+The first start builds the images and seeds demo data (about 2–4 minutes). UI languages: Armenian (default),
+English, Russian; documents are always Armenian.
 
 ## Demo credentials
 
@@ -33,7 +36,10 @@ docker compose up --build
 | editor | `editor@academy.am` | `Editor123!` |
 | coordinator | `coordinator@academy.am` | `Coord123!` |
 
-Signers have no account: they open the link from their email.
+In this test/demo environment the login page shows these accounts with one-click "Log in as …" buttons
+(hidden when the frontend is built with `APP_ENV=production`).
+
+Signers have no account: they open the link from their email (see Mailpit).
 
 The test/staging environment has no extra password gates; only the app's own login.
 

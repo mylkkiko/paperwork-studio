@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+/* shadcn/ui-style design tokens (light theme). */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.21 0.02 265);
+  --card: oklch(1 0 0);
+  --muted: oklch(0.97 0.005 265);
+  --muted-foreground: oklch(0.5 0.02 265);
+  --border: oklch(0.92 0.01 265);
+  --input: oklch(0.88 0.01 265);
+  --primary: oklch(0.42 0.13 255);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.01 265);
+  --secondary-foreground: oklch(0.25 0.02 265);
+  --accent: oklch(0.95 0.02 255);
+  --destructive: oklch(0.56 0.21 25);
+  --success: oklch(0.55 0.14 150);
+  --warning: oklch(0.72 0.15 75);
+  --ring: oklch(0.55 0.13 255);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-ring: var(--ring);
+  --radius-md: var(--radius);
+  --font-sans: 'Noto Sans Armenian', 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background: var(--color-muted);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}

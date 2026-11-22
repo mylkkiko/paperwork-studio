@@ -1,0 +1,101 @@
+# Paperwork Studio — Frontend
+
+Next.js 15 (App Router) + TypeScript · Tailwind CSS 4 + shadcn/ui-style components · TanStack Query ·
+react-hook-form + zod · next-intl (Armenian default, English, Russian).
+
+The app talks to the backend **only through its REST API** (`NEXT_PUBLIC_API_URL`).
+
+## Run
+
+Everything (backend + frontend + services), from the repository root:
+
+```bash
+docker compose up --build
+```
+
+| What | URL |
+| --- | --- |
+| App | http://localhost:3100 |
+| Public signing page | http://localhost:3100/sign/&lt;token&gt; (link from the email in Mailpit, http://localhost:8025) |
+
+### Local development
+
+```bash
+docker compose up -d        # backend + services (or run the backend locally, see backend/README.md)
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev                 # http://localhost:3100 (hot reload)
+```
+
+| Variable | Meaning |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Backend API **as seen from the browser**, e.g. `http://localhost:4000/api`. Inlined at build time. |
+| `NEXT_PUBLIC_APP_ENV` | `development` / `test` / `production`. Demo logins on the login page are shown only when this is **not** `production`. |
+
+In Docker these are build arguments (`PUBLIC_API_URL`, `APP_ENV` in `docker-compose.yml`). For a production build:
+`APP_ENV=production docker compose build frontend`.
+
+## Demo logins
+
+Outside production the login page lists the seeded accounts with a one-click **"Log in as …"** button:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| admin | `admin@academy.am` | `Admin123!` |
+| editor | `editor@academy.am` | `Editor123!` |
+| coordinator | `coordinator@academy.am` | `Coord123!` |
+
+## Screens
+
+| Route | Who | What |
+| --- | --- | --- |
+| `/login` | everyone | Login, demo accounts (dev/test only), language switcher |
+| `/dashboard` | all roles | Quick actions; recent packs and documents waiting for signature (coordinator), drafts (editor) |
+| `/templates` | all roles | Library: search, filter by category and status, upload (editor) |
+| `/templates/[id]` | all roles | Versions with statuses, preview PDF, fields with unknown ones highlighted, warnings, publish / upload version (editor), delete (admin) |
+| `/templates/[id]/compare` | all roles | Two-column clause comparison with word diff (red removed, green added), moved clauses, editable summary + publish (editor, draft only) |
+| `/generate` | coordinator | Wizard: template → recipients → precheck (fill in / exclude) → shared fields → progress `12 / 24` → ZIP, merged PDF, send |
+| `/signatures` | coordinator | Table with filters (group, template, version, status, "signed an older version"), remind, paper signature + scan, export CSV/XLSX, send selected, resend new version |
+| `/sign/[token]` | signer (no login) | Mobile-first: document, checkbox + confirm, decline; signed / declined / expired / replaced / invalid states |
+| `/admin/users`, `/admin/merge-fields` | admin | Users and roles; merge-field dictionary |
+
+Screenshots: [docs/screenshots](../docs/screenshots).
+
+## How it is organised
+
+```
+messages/hy.json en.json ru.json   all UI strings (next-intl); `npm run i18n:check` verifies they match
+src/i18n/                          locale from a cookie (not the URL, so /sign/<token> links stay simple)
+src/lib/api.ts                     fetch wrapper: JWT, JSON errors -> ApiError, authenticated downloads
+src/lib/auth.tsx                   session (token in localStorage, validated with /auth/me)
+src/lib/roles.ts                   what each role can see (the API enforces the same rules)
+src/lib/wizard.ts                  wizard state, step validation and API payload (pure functions)
+src/lib/format.ts                  UI dates per language (Armenian month names done here: browsers lack them)
+src/components/ui/                 shadcn/ui-style primitives (Radix + Tailwind), written in the repo
+src/components/                    app shell, states (loading / error / 403), PDF viewer, diff view, wizard steps, ...
+src/app/                           routes
+```
+
+### Rules followed
+
+- **No hard-coded UI strings**: every text goes through `next-intl`. `npm run i18n:check` checks that hy/en/ru have
+  the same keys, that every message is valid ICU, and that every literal key used in code exists.
+  Documents, emails and the stored change summary stay Armenian whatever the UI language.
+- **Role-based UI**: navigation shows only what the role can do; opening a forbidden page by URL shows "no access";
+  a 403 from the API is shown as a "no access" state, never a crash.
+- **Loading and error states** on every page (`QueryState`, `ErrorState` with retry).
+- **Files are never public**: downloads and in-app PDF previews fetch with the JWT and use blob URLs.
+- **Responsive**: sidebar on desktop, menu on phones; wide tables scroll inside their card; on phones the PDF opens
+  with a button (mobile browsers can't show a PDF inside a page).
+
+## Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` / `build` / `start` | Next.js on port 3100 |
+| `npm run typecheck` | TypeScript |
+| `npm run i18n:check` | Dictionary consistency |
+| `npm run screenshots` | Walks the main flow in a real browser against the Docker stack and saves `docs/screenshots/*.png` (reset the stack first: `docker compose down -v && docker compose up -d`) |
+
+Unit/component tests (Vitest + RTL + MSW) and E2E tests (Playwright) come in Phase 4.
