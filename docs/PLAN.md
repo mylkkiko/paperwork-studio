@@ -311,3 +311,14 @@ Changes vs. the plan:
 | 2 | Jest + Supertest suite, ≥ 80% line coverage on `src/services` |
 | 3 | Next.js app, all 9 screens, hy/en, screenshots |
 | 4 | Vitest/RTL/MSW + Playwright E2E (6 scenarios), final report |
+
+## 9. Bugs found and fixed by the Phase 2 tests
+
+| Bug | Fix |
+| --- | --- |
+| A failed PDF conversion stopped the batch, but the other parallel workers kept generating in the background (could race with the job's retry). | `mapLimit` stops taking new items on the first error and waits for in-flight work before failing. |
+| Invalid typed values (e.g. "someday" as a date) were only detected inside the background job. | Precheck validates values per field type (`invalidValues`); creating the batch returns 422 `INVALID_VALUES`. |
+| All recipients excluded gave a misleading `MISSING_DATA`. | 400 "All recipients are excluded". |
+| A reminder recorded at exactly the resend instant counted towards the new send's schedule. | Only reminders strictly after the latest send count. |
+| S-6 picked "the version the recipient signed" by creation time; with equal timestamps it could choose an older version. | Prefer the highest signed version number. |
+| A replaced clause (same number, different text) was listed "added" before "removed". | Removed clauses are emitted before an added clause at the same position. |

@@ -135,9 +135,20 @@ export function compareClauses(oldClauses: Clause[], newClauses: Clause[]): Comp
     }
   };
 
+  // Old index of the next matched clause after new position j: removed clauses before it are shown before an
+  // added clause, so a replaced clause reads "removed 5, added 5" rather than the other way round.
+  const nextPairedOld = (j: number) => {
+    for (let k = j + 1; k < newClauses.length; k++) {
+      const i = pairOfNew.get(k);
+      if (i !== undefined) return i;
+    }
+    return oldClauses.length;
+  };
+
   newClauses.forEach((n, j) => {
     const i = pairOfNew.get(j);
     if (i === undefined) {
+      emitRemovedBefore(nextPairedOld(j));
       changes.push({ status: 'added', moved: false, kind: n.kind, oldNumber: null, newNumber: n.number, title: n.title, oldText: null, newText: n.text, similarity: 0 });
       return;
     }

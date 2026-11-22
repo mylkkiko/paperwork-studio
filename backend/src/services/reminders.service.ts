@@ -55,7 +55,8 @@ export class RemindersService {
         continue;
       }
       const sentAt = doc.sentAt!;
-      const lastAutoDay = Math.max(0, ...doc.reminders.filter((r) => r.sentAt >= sentAt && r.scheduleDay).map((r) => r.scheduleDay!));
+      // Only reminders AFTER the latest send count: sending again restarts the schedule.
+      const lastAutoDay = Math.max(0, ...doc.reminders.filter((r) => r.sentAt > sentAt && r.scheduleDay).map((r) => r.scheduleDay!));
       const day = dueScheduleDay(sentAt, now, this.d.config.REMINDER_SCHEDULE_DAYS, lastAutoDay);
       if (day === null) continue;
 

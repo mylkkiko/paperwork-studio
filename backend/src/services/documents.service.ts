@@ -212,12 +212,13 @@ export class DocumentsService {
         templateVersion: { templateId: input.templateId },
         NOT: { templateVersionId: published.id },
       },
-      orderBy: { createdAt: 'desc' },
+      // newest signed version first (createdAt only breaks ties)
+      orderBy: [{ templateVersion: { versionNumber: 'desc' } }, { createdAt: 'desc' }],
     });
     const onCurrent = new Set(
       (await this.d.prisma.document.findMany({ where: { templateVersionId: published.id, status: { not: 'declined' } }, select: { recipientId: true } })).map((x) => x.recipientId),
     );
-    // newest signed document per recipient, skipping those already on the current version
+    // latest signed version per recipient, skipping those already on the current version
     const byRecipient = new Map<string, (typeof signedOld)[number]>();
     for (const doc of signedOld) if (!onCurrent.has(doc.recipientId) && !byRecipient.has(doc.recipientId)) byRecipient.set(doc.recipientId, doc);
     const docs = [...byRecipient.values()];
@@ -267,7 +268,8 @@ export class DocumentsService {
       const doc = docs.find((x) => x.id === docId)!;
       const old = await this.d.prisma.document.findFirst({
         where: { recipientId: doc.recipientId, status: 'signed', templateVersion: { templateId: newVersion.templateId }, NOT: { templateVersionId: newVersion.id } },
-        orderBy: { createdAt: 'desc' },
+        // the most recent version this recipient signed
+        orderBy: [{ templateVersion: { versionNumber: 'desc' } }, { createdAt: 'desc' }],
         include: { templateVersion: true },
       });
       if (!old) return newVersion.changeSummary ?? '';

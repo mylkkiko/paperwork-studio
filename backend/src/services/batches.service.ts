@@ -20,7 +20,7 @@ import * as docx from './docx.service';
 import type { AuditService } from './audit.service';
 import type { MergeFieldsService } from './merge-fields.service';
 import { buildValues, findMissing, RecipientsService, signatureText, type MissingField, type Recipient } from './recipients.service';
-import { formatDateHy } from './formatters';
+import { formatDateHy, formatValue, type FieldType } from './formatters';
 
 export interface BatchInput {
   templateVersionId?: string;
@@ -46,6 +46,8 @@ export interface PrecheckResult {
   /** Manual fields shared by the whole pack (entered once, G-4) */
   commonFields: { key: string; label: string; type: string; required: boolean; value: unknown }[];
   missingCommon: MissingField[];
+  /** Values that can't be formatted for their field type (e.g. "someday" for a date) */
+  invalidValues: { recipientId: string | null; key: string; value: unknown }[];
   recipients: { id: string; name: string; email: string | null; excluded: boolean; missing: MissingField[] }[];
   ready: boolean;
 }
@@ -60,13 +62,27 @@ export async function nextDocumentNumber(prisma: Deps['prisma'], year: number): 
   return `PS-${year}-${String(rows[0].value).padStart(6, '0')}`;
 }
 
-/** Run `fn` over items with at most `limit` in flight. */
+/**
+ * Run `fn` over items with at most `limit` in flight.
+ * On the first error, workers stop taking new items and we wait for the in-flight ones to settle before throwing.
+ * (Throwing immediately would leave workers running in the background after the batch is marked failed,
+ * racing with the job's retry.)
+ */
 async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
   let next = 0;
+  let failure: { error: unknown } | null = null;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) await fn(items[next++]);
+    while (!failure && next < items.length) {
+      const item = items[next++];
+      try {
+        await fn(item);
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
   });
   await Promise.all(workers);
+  if (failure) throw (failure as { error: unknown }).error;
 }
 
 const safeName = (s: string) => s.replace(/[\\/:*?"<>|]+/g, '_').trim();
@@ -115,18 +131,39 @@ export class BatchesService {
       .filter((f) => included.some((r) => r.missingShared.some((m) => m.key === f.key)))
       .map((f) => ({ key: f.key, label: f.label, source: 'manual', type: f.type }));
 
+    // Typed-in values must be formattable for their field type, so the job never fails on "someday" as a date.
+    const invalidValues: PrecheckResult['invalidValues'] = [];
+    const checkValues = (recipientId: string | null, values: Record<string, unknown> | undefined) => {
+      for (const [key, value] of Object.entries(values ?? {})) {
+        const def = dictionary.get(key);
+        if (!def || value === null || value === '') continue;
+        try {
+          formatValue(def.type as FieldType, value);
+        } catch {
+          invalidValues.push({ recipientId, key, value });
+        }
+      }
+    };
+    checkValues(null, common);
+    for (const [rid, values] of Object.entries(input.overrides ?? {})) if (!excluded.has(rid)) checkValues(rid, values);
+
     return {
       templateVersionId: version.id,
       total: included.length,
       commonFields,
       missingCommon,
+      invalidValues,
       recipients: rows.map(({ missingShared: _ms, ...r }) => r),
-      ready: included.length > 0 && missingCommon.length === 0 && included.every((r) => r.missing.length === 0),
+      ready: included.length > 0 && missingCommon.length === 0 && invalidValues.length === 0 && included.every((r) => r.missing.length === 0),
     };
   }
 
   async create(actorId: string, input: InternalBatchInput) {
     const check = await this.precheck(input);
+    if (check.total === 0) throw badRequest('All recipients are excluded');
+    if (check.invalidValues.length) {
+      throw unprocessable('INVALID_VALUES', 'Some values do not match their field type', check.invalidValues);
+    }
     if (!check.ready) {
       throw unprocessable('MISSING_DATA', 'Some required values are missing. Fill them in or exclude the recipients.', {
         missingCommon: check.missingCommon,
