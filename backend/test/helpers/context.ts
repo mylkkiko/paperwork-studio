@@ -144,6 +144,15 @@ export async function createTestContext(opts: ContextOptions = {}) {
       }
       return tokensByDoc;
     },
+
+    /** The only way to sign: the coordinator records the handwritten signature with its scan (S-3). */
+    async paperSign(documentId: string, opts: { signedAt?: string; file?: Buffer; name?: string } = {}) {
+      let req = api.post(`/api/documents/${documentId}/paper-signature`).set(ctx.auth('coordinator'));
+      if (opts.signedAt) req = req.field('signedAt', opts.signedAt);
+      const res = await req.attach('file', opts.file ?? Buffer.from('%PDF-1.4\n%%EOF'), opts.name ?? 'scan.pdf');
+      if (res.status !== 201) throw new Error(`paper signature failed: ${res.status} ${JSON.stringify(res.body)}`);
+      return res.body;
+    },
   };
   return ctx;
 }

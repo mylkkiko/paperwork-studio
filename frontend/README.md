@@ -56,8 +56,8 @@ Outside production the login page lists the seeded accounts with a one-click **"
 | `/templates/[id]` | all roles | Versions with statuses, preview PDF, fields with unknown ones highlighted, warnings, publish / upload version (editor), delete (admin) |
 | `/templates/[id]/compare` | all roles | Two-column clause comparison with word diff (red removed, green added), moved clauses, editable summary + publish (editor, draft only) |
 | `/generate` | coordinator | Wizard: template → recipients → precheck (fill in / exclude) → shared fields → progress `12 / 24` → ZIP, merged PDF, send |
-| `/signatures` | coordinator | Table with filters (group, template, version, status, "signed an older version"), remind, paper signature + scan, export CSV/XLSX, send selected, resend new version |
-| `/sign/[token]` | signer (no login) | Mobile-first: document, checkbox + confirm, decline; signed / declined / expired / replaced / invalid states |
+| `/signatures` | coordinator | Table with filters (group, template, version, status, "signed an older version"), remind, upload the signed scan (required; the only way to "signed"), "View scan" on signed rows, export CSV/XLSX, send selected, resend new version |
+| `/sign/[token]` | recipient (no login) | Document page, mobile-first: PDF, Download / Print, instruction (print → sign by hand next to ☐ → hand to the coordinator by the deadline), decline. States: open, signed on paper, declined, deadline passed (document still shown), replaced, invalid. No online signing |
 | `/admin/users`, `/admin/merge-fields` | admin | Users and roles; merge-field dictionary |
 
 Screenshots: [docs/screenshots](../docs/screenshots).
@@ -123,7 +123,7 @@ The API is mocked with MSW, Next.js navigation is mocked, components render with
 | `tests/unit/precheck-table` | ready/missing/excluded summary, inline fill per recipient, exclude disables inputs |
 | `tests/unit/signatures` | filters ⇄ URL ⇄ API query, actions per status, select-all, "signed an older version" + resend, error state |
 | `tests/unit/roles` | menu per role, forbidden URLs show "No access", redirect to login, 403 handling |
-| `tests/unit/sign-flow` | signing page states: ready (checkbox gates confirm), signed, paper receipt, declined, expired, replaced, invalid, error |
+| `tests/unit/sign-flow` | document page states: open (instruction, Download / Print, no checkbox or sign button), signed on paper, declined (+ decline error), deadline passed in hy/ru/en, replaced, invalid, error |
 | `tests/unit/login` | demo one-click login, validation, translated error (Russian) |
 | `tests/unit/format-i18n` | Armenian/English/Russian dates, missing-translation marker, dictionary consistency |
 
@@ -136,15 +136,16 @@ Each run creates its own templates with unique names, so it works on any databas
 | --- | --- |
 | `main-flow` 1 | editor uploads v2 → comparison (counts, word diff, summary) → edits summary → publishes; v1 archived |
 | `main-flow` 2 | coordinator wizard for the 24-student group: precheck fills, shared fields, progress → ZIP download (checked) → send 24 |
-| `main-flow` 3 | signer opens the link from Mailpit → ticks → signs; coordinator sees "signed" on v2 |
+| `main-flow` 3 | recipient opens the link from Mailpit → sees the document and the instruction, no sign button; coordinator uploads the scan (refused without a file) → "signed" on v2, "View scan"; the link then shows "signed on paper" |
 | `main-flow` 4 | "remind now" → reminder email in Mailpit, counter updated |
 | `main-flow` 5 | "signed an older version" filter → resend → email with the change summary → new v2 document sent |
-| `main-flow` 6 | expired link → expired page; document shown as expired |
+| `main-flow` 6 | deadline passed → the page still shows the document with "deadline passed, contact your coordinator", no decline; row shows expired |
+| `main-flow` 7 | recipient declines via the link → coordinator sees "declined" |
 | `theme` | Light / Dark / System toggle, choice persists after reload, System follows the OS (`colorScheme`), no flash of the wrong theme, PDF area stays white |
 | `a11y` | axe-core (WCAG 2.1 A/AA incl. contrast) on login, signing page, dashboards, templates, template detail, compare, wizard, signatures, admin — light and dark; fails on serious/critical |
-| `mobile-signing` | phone viewport: "Open document" button (no empty PDF frame, no horizontal scroll), PDF opens, tap to sign, success |
-| `languages` | hy → ru → en on dashboard and signatures table: no missing keys (visible `⟦missing:…⟧` marker), no raw keys, no i18n console errors, choice remembered; phone (375 px): nothing overflows the screen in any language |
+| `mobile-signing` | phone viewport: instruction + Download / Print (no empty PDF frame, no sign button, no horizontal scroll), the PDF opens; after the coordinator uploads the scan the page shows "signed on paper" |
+| `languages` | hy → ru → en on dashboard and signatures table: no missing keys (visible `⟦missing:…⟧` marker), no raw keys, no i18n console errors, choice remembered; phone (375 px): nothing overflows the screen in any language, incl. the document page (open and deadline passed) |
 
-Expiry can't be waited for (14 days), so scenario 6 moves the link's expiry into the past directly in Postgres
+The deadline can't be waited for (14 days), so scenario 6 moves the link's expiry into the past directly in Postgres
 (`docker compose exec postgres psql …`). A missing translation renders as `⟦missing:namespace.key⟧`
 (`src/i18n/fallback.ts`), which the language test looks for.

@@ -72,15 +72,6 @@ describe('Armenian PDF rendering (real Gotenberg)', () => {
     expect(fonts).toEqual(expect.arrayContaining(['NotoSerifArmenian-Regular', 'NotoSerif-Regular', 'DejaVuSans']));
   });
 
-  it('signed copy shows ☑ with the confirmation date and time', async () => {
-    const tokens = await ctx.send([doc.id]);
-    expect((await ctx.api.post(`/api/sign/${tokens[doc.id]}`).send({ agree: true })).status).toBe(200);
-    const signed = await prisma.document.findUniqueOrThrow({ where: { id: doc.id } });
-    const signedLines = pdfLines(await ctx.deps.storage.get(signed.signedPdfPath!));
-    expect(signedLines).toContain('☑ Հաստատված է առցանց՝ 21 նոյեմբերի 2026 թ., 14:00');
-    expect(signedLines.some((l) => l.includes('☐'))).toBe(false);
-    expect(signedLines.some((l) => /Ուսանող՝ Աննա Հակոբյան/.test(l))).toBe(true);
-  });
 });
 
 describe('performance: 24-document pack with real conversion', () => {

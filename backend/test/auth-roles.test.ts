@@ -145,10 +145,9 @@ describe('public signing routes need no login', () => {
   it.each([
     ['get', '/api/sign/unknown-token'],
     ['get', '/api/sign/unknown-token/pdf'],
-    ['post', '/api/sign/unknown-token'],
     ['post', '/api/sign/unknown-token/decline'],
   ] as const)('%s %s -> 404 for an unknown token (not 401)', async (method, path) => {
-    const res = await ctx.api[method](path).send({ agree: true });
+    const res = await ctx.api[method](path).send({});
     expect(res.status).toBe(404);
   });
 });

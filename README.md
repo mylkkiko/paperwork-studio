@@ -39,7 +39,9 @@ English, Russian; documents are always Armenian.
 In this test/demo environment the login page shows these accounts with one-click "Log in as …" buttons
 (hidden when the frontend is built with `APP_ENV=production`).
 
-Signers have no account: they open the link from their email (see Mailpit).
+Recipients have no account: they open the link from their email (see Mailpit), read and print the document, sign it
+by hand next to the ☐ box and hand the paper to their coordinator. The coordinator uploads the scan, which sets the
+document to "signed" — there is no online signing. The 14-day link lifetime is the deadline to hand in the paper.
 
 The test/staging environment has no extra password gates; only the app's own login.
 
@@ -52,8 +54,8 @@ npm --prefix backend install && npm --prefix frontend install   # once
 npx --prefix frontend playwright install chromium              # once, for E2E
 docker compose up -d --build                                    # backend tests use its Postgres + Gotenberg; E2E uses the whole stack
 
-npm test            # backend (Jest + Supertest, 326 tests) + frontend unit/component (Vitest, 58 tests)
-npm run test:e2e    # Playwright end-to-end against the running stack (8 tests)
+npm test            # backend (Jest + Supertest, 330 tests) + frontend unit/component (Vitest, 57 tests)
+npm run test:e2e    # Playwright end-to-end against the running stack (23 tests)
 ```
 
 Details: [backend/README.md](backend/README.md#tests), [frontend/README.md](frontend/README.md#tests).
@@ -64,6 +66,6 @@ Details: [backend/README.md](backend/README.md#tests), [frontend/README.md](fron
 | --- | --- |
 | In-browser template editor (T-9) | templates are uploaded as .docx; `TemplatesService.create/addVersion` take a buffer from any source |
 | LLM-written change summary (V-6) | `SummaryGenerator` interface (`backend/src/services/summary/`), wired in `backend/src/container.ts` |
-| Qualified e-signatures (S-8) | `SigningService` + `Signature.method` (add a method next to `online` / `paper`) |
+| Qualified e-signatures (S-8), e.g. Armenian ID card / mobile ID | `Signature.method` + `SignatureMethod` enum (`online` is kept, unused, for this; today only `paper` is recorded) |
 | Real Core Engine | `CoreEngineClient` interface; today `StubCoreEngineClient` |
 | S3 storage | `StorageService` interface; today `LocalStorageService` |

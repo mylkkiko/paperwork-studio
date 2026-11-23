@@ -3,7 +3,7 @@
  * translations. A missing key renders as "⟦missing:…⟧" and logs "[i18n]" to the console (see src/i18n/fallback.ts).
  */
 import { test, expect, type Page } from '@playwright/test';
-import { Api, unique } from './api';
+import { Api, expireLinks, linkFrom, unique, waitForMail } from './api';
 import { loginAs, setLanguage } from './helpers';
 
 const EXPECT = {
@@ -72,12 +72,20 @@ test.describe('phone layout in hy / ru / en', () => {
 
   test('no horizontal overflow on the main screens', async ({ page }) => {
     const { templateId } = await (await Api.as('editor')).createPublishedTemplate(unique('E2E լայնություն'));
+    // the public document page: open, and after the deadline
+    const coord = await Api.as('coordinator');
+    const docs = await coord.generate(templateId, ['stu-011', 'stu-012']);
+    await coord.send([docs['stu-011'].id, docs['stu-012'].id]);
+    const openLink = linkFrom((await waitForMail(docs['stu-011'].recipientEmail, docs['stu-011'].number)).text);
+    const expiredLink = linkFrom((await waitForMail(docs['stu-012'].recipientEmail, docs['stu-012'].number)).text);
+    expireLinks(docs['stu-012'].id);
     await loginAs(page, 'coordinator');
     for (const locale of ['hy', 'ru', 'en'] as const) {
       if (locale !== 'hy') await setLanguage(page, locale);
-      for (const path of ['/dashboard', '/templates', `/templates/${templateId}`, '/generate', '/signatures']) {
+      for (const path of ['/dashboard', '/templates', `/templates/${templateId}`, '/generate', '/signatures', openLink, expiredLink]) {
         await page.goto(path);
         await page.waitForLoadState('networkidle');
+        expect(await page.locator('body').innerText()).not.toContain('⟦missing:');
         const overflow = await page.evaluate(() => {
           const vw = document.documentElement.clientWidth;
           // elements that stick out of the viewport (scroll containers like tables are allowed to scroll inside)

@@ -1,8 +1,6 @@
 {
   "signature": {
-    "unsigned": "☐  Signature: ____________",
-    "signedOnline": "☑  Confirmed online: {date}",
-    "signedPaper": "☑  Signed on paper: {date}"
+    "unsigned": "☐  Signature: ____________"
   },
   "summary": {
     "preamble": "Preamble",
@@ -28,15 +26,15 @@
   "email": {
     "signRequest": {
       "subject": "For signature: {title} No. {number}",
-      "body": "Dear {name},\n\nPlease review the document \"{title}\" (No. {number}) and confirm it using this link:\n{link}\n\nThe link is valid until {expires}.\n\nKind regards,\n{academy}"
+      "body": "Dear {name},\n\nPlease review the document \"{title}\" (No. {number}) using this link:\n{link}\n\nPlease print the document, sign it by hand next to the ☐ box and hand it to your coordinator by {expires}.\n\nKind regards,\n{academy}"
     },
     "reminder": {
-      "subject": "Reminder: document {title} No. {number} is waiting for your confirmation",
-      "body": "Dear {name},\n\nThis is a reminder that the document \"{title}\" (No. {number}) has not been confirmed yet.\nPlease use this link:\n{link}\n\nThe link is valid until {expires}.\n\nKind regards,\n{academy}"
+      "subject": "Reminder: document {title} No. {number} is waiting for your signature",
+      "body": "Dear {name},\n\nThis is a reminder that the signed copy of the document \"{title}\" (No. {number}) has not been handed in yet.\nThe document is available here:\n{link}\n\nPlease print the document, sign it by hand next to the ☐ box and hand it to your coordinator by {expires}.\n\nKind regards,\n{academy}"
     },
     "newVersion": {
       "subject": "Updated document: {title} No. {number}",
-      "body": "Dear {name},\n\nThe document \"{title}\" has been updated. Changes:\n{summary}\n\nPlease review the new version (No. {number}) and confirm it:\n{link}\n\nThe link is valid until {expires}.\n\nKind regards,\n{academy}"
+      "body": "Dear {name},\n\nThe document \"{title}\" has been updated. Changes:\n{summary}\n\nPlease review the new version (No. {number}) using this link:\n{link}\n\nPlease print the document, sign it by hand next to the ☐ box and hand it to your coordinator by {expires}.\n\nKind regards,\n{academy}"
     }
   },
   "export": {

@@ -4,7 +4,7 @@
 #   ./scripts/walkthrough.sh               (API on localhost:4000, Mailpit on localhost:8025)
 #
 # upload template -> publish -> precheck -> generate 24 -> download ZIP/merged PDF -> send ->
-# sign one via the token from the email -> remind another -> signature table -> export ->
+# recipient opens the link from the email (view only) -> coordinator uploads the scan of the signed paper -> remind another -> signature table -> export ->
 # (S-6) publish v2 -> "signed older version" -> resend with change summary
 #
 # Requires: curl, jq. Safe to re-run: it creates a new template each time.
@@ -84,11 +84,15 @@ TOKEN=$(curl -sf "$MAILPIT/api/v1/message/$MSG" | jq -r .Text | grep -oE '/sign/
 echo "token from email: ${TOKEN:0:8}… (${#TOKEN} chars)"
 curl -sf "$API/sign/$TOKEN" | jq -c '{documentNumber, title, versionNumber, status}'
 
-step "Signer ticks the checkbox and confirms"
-call -X POST "$API/sign/$TOKEN" -H 'content-type: application/json' -H 'user-agent: walkthrough-phone' -d '{"agree":true}' | jq -c .
-curl -sf -o "$OUT/signed.pdf" "$API/sign/$TOKEN/pdf"
-echo "signed copy -> $OUT/signed.pdf"
-echo -n "same token again: "; curl -s -X POST "$API/sign/$TOKEN" -H 'content-type: application/json' -d '{"agree":true}' | jq -c .error
+step "Signer downloads the document to print and sign by hand (there is no online signing)"
+curl -sf -o "$OUT/document.pdf" "$API/sign/$TOKEN/pdf"
+echo "document -> $OUT/document.pdf"
+echo -n "online signing attempt: "; curl -s -X POST "$API/sign/$TOKEN" -H 'content-type: application/json' -d '{"agree":true}' | jq -c .error
+
+step "Coordinator uploads the scan of the signed paper (the scan is required)"
+echo -n "without a scan: "; curl -s -X POST "$API/documents/$SIGNER_DOC/paper-signature" -H "authorization: Bearer $COORD" | jq -c .error
+call "$API/documents/$SIGNER_DOC/paper-signature" -H "authorization: Bearer $COORD" -F "file=@$OUT/document.pdf;filename=scan.pdf" | jq -c '{method, signedAt, hasScan}'
+curl -sf "$API/sign/$TOKEN" | jq -c '{status, signatureMethod, signedAt}'
 
 OTHER_DOC=$(jq -r '[.items[] | select(.recipientId=="stu-002")][0].id' <<<"$DOCS")
 step "Coordinator: remind now (stu-002), and try to remind the signed document"

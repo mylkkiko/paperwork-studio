@@ -30,7 +30,7 @@ export function documentsRoutes(s: Services) {
   });
 
   r.get('/:id/pdf', async (req, res) => {
-    const f = await s.documents.pdf(String(req.params.id), req.query.original === '1' ? 'original' : 'auto');
+    const f = await s.documents.pdf(String(req.params.id));
     sendFile(res, f.buffer, f.fileName, { inline: req.query.inline === '1' });
   });
   r.get('/:id/docx', async (req, res) => {

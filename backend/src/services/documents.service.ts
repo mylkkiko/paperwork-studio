@@ -1,10 +1,12 @@
 /**
  * Coordinator actions on generated documents (S-1, S-3, S-5 manual, S-6).
  *
- * Status flow:   created ─send─▶ sent ─open link─▶ viewed ─confirm─▶ signed
- *                                  │                  └─decline─▶ declined
- *                                  └──(link expired, no signature)──▶ expired ─send again─▶ sent
- * Paper signature can be recorded from created / sent / viewed / expired.
+ * Signatures are handwritten on paper. The email link only delivers the document.
+ *
+ * Status flow:   created ─send─▶ sent ─open link─▶ viewed ─coordinator uploads the scan─▶ signed
+ *                                  │                  └─decline (before the deadline)─▶ declined
+ *                                  └──(deadline passed, no signed paper yet)──▶ expired ─send again─▶ sent
+ * A paper signature (scan required) can be recorded from created / sent / viewed / expired (late paper is fine).
  * Signed and declined documents are final: no sending, no reminders.
  */
 import type { DocumentStatus, Prisma } from '@prisma/client';
@@ -38,7 +40,6 @@ const listSelect = {
   viewedAt: true,
   declinedAt: true,
   createdAt: true,
-  signedPdfPath: true,
   templateVersion: { select: { versionNumber: true, status: true, template: { select: { id: true, title: true, category: true } } } },
   signatures: { select: { method: true, signedAt: true, scanPath: true }, orderBy: { signedAt: 'desc' as const }, take: 1 },
   _count: { select: { reminders: true } },
@@ -69,7 +70,6 @@ export function toListDto(d: ListRow) {
     signedAt: sig?.signedAt ?? null,
     signatureMethod: sig?.method ?? null,
     hasScan: Boolean(sig?.scanPath),
-    hasSignedPdf: Boolean(d.signedPdfPath),
     reminderCount: d._count.reminders,
   };
 }
@@ -112,11 +112,10 @@ export class DocumentsService {
     return doc;
   }
 
-  /** Signed copy if there is one (online signature), otherwise the original. */
-  async pdf(id: string, which: 'auto' | 'original' = 'auto') {
+  /** The generated document. The signed copy is the uploaded scan (see scan()). */
+  async pdf(id: string) {
     const doc = await this.load(id);
-    const path = which === 'auto' && doc.signedPdfPath ? doc.signedPdfPath : doc.pdfPath;
-    return { buffer: await this.d.storage.get(path), fileName: `${doc.number}.pdf` };
+    return { buffer: await this.d.storage.get(doc.pdfPath), fileName: `${doc.number}.pdf` };
   }
 
   async docx(id: string) {
@@ -175,7 +174,7 @@ export class DocumentsService {
     return reminder;
   }
 
-  /** S-3: coordinator records a handwritten signature and uploads the scan. */
+  /** S-3: the ONLY way a document becomes signed: the coordinator records the handwritten signature with its scan. */
   async paperSignature(actorId: string, id: string, scan: { buffer: Buffer; ext: string }, input: { signerName?: string; signedAt?: Date }) {
     const doc = await this.load(id);
     if (FINAL.includes(doc.status)) throw conflict('DOCUMENT_FINAL', `Document is already ${doc.status}`);

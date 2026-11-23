@@ -11,7 +11,7 @@ beforeAll(async () => {
   ({ templateId } = await ctx.createTemplate('student_agreement_v1.docx'));
   const { docs } = await ctx.generate({ templateId, recipientType: 'student', groupId: GROUP, recipientIds: ['stu-001', 'stu-002', 'stu-003'], ...READY_VALUES });
   const tokens = await ctx.send([docs[0].id, docs[1].id]);
-  await ctx.api.post(`/api/sign/${tokens[docs[0].id]}`).send({ agree: true });
+  await ctx.paperSign(docs[0].id);
   await ctx.api.post(`/api/documents/${docs[1].id}/remind`).set(ctx.auth('coordinator'));
 });
 
@@ -34,7 +34,7 @@ describe('signature table (S-4)', () => {
       ['Դավիթ Գրիգորյան', 'sent', 1, 1],
       ['Մարիամ Պետրոսյան', 'created', 1, 0],
     ]);
-    expect(res.body.items[0]).toMatchObject({ signatureMethod: 'online', signedAt: expect.any(String), hasSignedPdf: true, isCurrentVersion: true });
+    expect(res.body.items[0]).toMatchObject({ signatureMethod: 'paper', signedAt: expect.any(String), hasScan: true, isCurrentVersion: true });
     expect(JSON.stringify(res.body)).not.toMatch(/AN\d{7}|dataSnapshot/);
   });
 
@@ -58,20 +58,20 @@ describe('exports (S-7)', () => {
     const lines = text.slice(1).trim().split('\r\n');
     expect(lines[0]).toBe('Ստացող,Էլ. փոստ,Փաստաթուղթ,Ձևանմուշ,Տարբերակ,Կարգավիճակ,Եղանակ,Ուղարկվել է,Ստորագրվել է,Հիշեցումներ');
     expect(lines).toHaveLength(4);
-    expect(lines[1]).toMatch(/^Աննա Հակոբյան,anna\.hakobyan@student\.academy\.am,PS-2026-\d{6},Ուսուցման պայմանագիր,v1,Ստորագրված,Առցանց,"21 նոյեմբերի 2026 թ\., 14:00","21 նոյեմբերի 2026 թ\., 14:00",0$/);
+    expect(lines[1]).toMatch(/^Աննա Հակոբյան,anna\.hakobyan@student\.academy\.am,PS-2026-\d{6},Ուսուցման պայմանագիր,v1,Ստորագրված,Թղթային,"21 նոյեմբերի 2026 թ\., 14:00","21 նոյեմբերի 2026 թ\., 14:00",0$/);
     expect(lines[2]).toMatch(/,Ուղարկված,,.*,,1$/);
   });
 
   it('CSV in English', async () => {
     const text = ((await download('format=csv&locale=en')).body as Buffer).toString('utf8');
     expect(text.split('\r\n')[0]).toBe('﻿Recipient,Email,Document,Template,Version,Status,Method,Sent at,Signed at,Reminders');
-    expect(text).toContain(',Signed,Online,');
+    expect(text).toContain(',Signed,Paper,');
   });
 
   it('CSV in Russian', async () => {
     const text = ((await download('format=csv&locale=ru')).body as Buffer).toString('utf8');
     expect(text.split('\r\n')[0]).toBe('\uFEFFПолучатель,Эл. почта,Документ,Шаблон,Версия,Статус,Способ,Отправлено,Подписано,Напоминания');
-    expect(text).toContain(',Подписан,Онлайн,');
+    expect(text).toContain(',Подписан,На бумаге,');
   });
 
   it('CSV escapes commas and quotes', async () => {
@@ -89,7 +89,7 @@ describe('exports (S-7)', () => {
     expect((ws.getRow(1).values as unknown[]).slice(1)).toEqual(['Recipient', 'Email', 'Document', 'Template', 'Version', 'Status', 'Method', 'Sent at', 'Signed at', 'Reminders']);
     expect(ws.rowCount).toBe(4);
     expect((ws.getRow(2).values as unknown[]).slice(1)).toEqual([
-      'Աննա Հակոբյան', 'anna.hakobyan@student.academy.am', expect.stringMatching(/^PS-2026-/), 'Ուսուցման պայմանագիր', 'v1', 'Signed', 'Online',
+      'Աննա Հակոբյան', 'anna.hakobyan@student.academy.am', expect.stringMatching(/^PS-2026-/), 'Ուսուցման պայմանագիր', 'v1', 'Signed', 'Paper',
       '21 նոյեմբերի 2026 թ., 14:00', '21 նոյեմբերի 2026 թ., 14:00', 0,
     ]);
   });

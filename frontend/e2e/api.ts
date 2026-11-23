@@ -79,7 +79,20 @@ export class Api {
   send(documentIds: string[]) {
     return this.call('/documents/send', { body: { documentIds } });
   }
+
+  /** The only way to sign: record the handwritten signature with its scan (setup only). */
+  paperSign(documentId: string) {
+    const fd = new FormData();
+    fd.append('file', new Blob([SCAN_PDF], { type: 'application/pdf' }), 'scan.pdf');
+    return this.call(`/documents/${documentId}/paper-signature`, { form: fd });
+  }
 }
+
+/** A tiny but valid one-page PDF, used as the "scan" of a signed paper document. */
+export const SCAN_PDF = Buffer.from(
+  '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+    '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n',
+);
 
 interface MailSummary {
   ID: string;
@@ -111,14 +124,8 @@ export function linkFrom(text: string) {
 
 export const tokenOf = (path: string) => path.split('/').pop()!;
 
-/** Sign through the public API (setup only). */
-export async function signViaApi(path: string) {
-  const res = await fetch(`${API_URL}/sign/${tokenOf(path)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agree: true }) });
-  if (!res.ok) throw new Error(`sign failed: ${res.status}`);
-}
-
 /**
- * Links expire after 14 days; E2E can't wait that long, so the test moves the expiry into the past in the database
+ * The deadline is 14 days; E2E can't wait that long, so the test moves the link expiry into the past in the database
  * (the same thing that happens when the time passes). Requires the docker-compose Postgres.
  */
 export function expireLinks(documentId: string) {

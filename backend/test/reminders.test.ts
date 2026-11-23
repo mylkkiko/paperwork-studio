@@ -42,7 +42,7 @@ describe('automatic reminders (S-5)', () => {
   it('day 2 and day 5 after sending, once each, only to unsigned recipients', async () => {
     const { ctx, docs } = await setup(5);
     const tokens = await ctx.send(docs.slice(0, 4).map((d) => d.id)); // docs[4] is never sent
-    await ctx.api.post(`/api/sign/${tokens[docs[0].id]}`).send({ agree: true });
+    await ctx.paperSign(docs[0].id);
     await ctx.api.post(`/api/sign/${tokens[docs[1].id]}/decline`).send({});
     await ctx.api.get(`/api/sign/${tokens[docs[3].id]}`); // viewed but not signed: still reminded
     const remindedIds = async () => (await prisma.reminder.findMany({ where: { type: 'auto' }, orderBy: { sentAt: 'asc' } })).map((r) => [r.documentId, r.scheduleDay]);
@@ -103,6 +103,21 @@ describe('automatic reminders (S-5)', () => {
     expect(await ctx.services.reminders.runAuto()).toMatchObject({ reminded: 1 });
   });
 
+  it('reminders stop once the scan of the paper signature is uploaded', async () => {
+    const { ctx, docs } = await setup(1);
+    await ctx.send([docs[0].id]);
+    ctx.clock.set(at(2));
+    expect(await ctx.services.reminders.runAuto()).toMatchObject({ reminded: 1 });
+    ctx.clock.set(at(3));
+    await ctx.paperSign(docs[0].id);
+    for (const day of [5, 6, 13, 20]) {
+      ctx.clock.set(at(day));
+      expect(await ctx.services.reminders.runAuto()).toEqual({ checked: 0, reminded: 0, expired: 0 });
+    }
+    expect(await prisma.reminder.count()).toBe(1);
+    expect((await ctx.api.post(`/api/documents/${docs[0].id}/remind`).set(ctx.auth('coordinator'))).body.error.code).toBe('DOCUMENT_FINAL');
+  });
+
   it('documents whose links expired are marked expired and never reminded again', async () => {
     const { ctx, docs } = await setup(1);
     await ctx.send([docs[0].id]);
@@ -123,7 +138,11 @@ describe('"remind now" button (S-5)', () => {
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ type: 'manual', documentId: docs[0].id });
     expect(ctx.mailer.sent.slice(before)).toHaveLength(1);
-    expect(ctx.mailer.sent.at(-1)!.text).toContain('դեռ հաստատված չէ');
+    const reminder = ctx.mailer.sent.at(-1)!;
+    expect(reminder.subject).toBe(`Հիշեցում․ Ուսուցման պայմանագիր № ${docs[0].number} փաստաթուղթը սպասում է Ձեր ստորագրությանը`);
+    expect(reminder.text).toContain('ստորագրված օրինակը դեռ չի հանձնվել');
+    expect(reminder.text).toContain('Տպեք փաստաթուղթը, ստորագրեք ձեռքով ☐ վանդակի կողքին և հանձնեք այն Ձեր համակարգողին մինչև 5 դեկտեմբերի 2026 թ.');
+    expect(reminder.text).not.toMatch(/հաստատ|առցանց/); // no "confirm" / "online" wording
     const list = await ctx.api.get(`/api/documents?batchId=${docs[0].batchId}`).set(ctx.auth('coordinator'));
     expect(list.body.items[0].reminderCount).toBe(1);
   });
@@ -134,7 +153,7 @@ describe('"remind now" button (S-5)', () => {
 
     expect((await remind(docs[0].id)).body.error.code).toBe('NOT_SENT');
     const tokens = await ctx.send(docs.slice(1).map((d) => d.id));
-    await ctx.api.post(`/api/sign/${tokens[docs[1].id]}`).send({ agree: true });
+    await ctx.paperSign(docs[1].id);
     await ctx.api.post(`/api/sign/${tokens[docs[2].id]}/decline`).send({});
     for (const i of [1, 2]) {
       const res = await remind(docs[i].id);

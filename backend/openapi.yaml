@@ -4,7 +4,11 @@ info:
   version: 0.1.0
   description: |
     Templates (.docx with `{{merge.fields}}`), batch generation (PDF + DOCX), clause-by-clause version comparison,
-    online/paper signatures and reminders.
+    paper signatures and reminders.
+
+    **Signatures are handwritten on paper.** The emailed link only delivers the document (view, download/print,
+    decline). A document becomes `signed` only through `POST /api/documents/{id}/paper-signature` with the scan.
+    The link lifetime (`SIGN_LINK_TTL_DAYS`, default 14) is the deadline to hand in the signed paper.
 
     **Auth**: `POST /api/auth/login` returns a JWT; send it as `Authorization: Bearer <token>`.
     Roles: `admin` (everything), `editor`, `coordinator`. The `/api/sign/*` routes are public and token-based.
@@ -363,7 +367,7 @@ paths:
   /api/documents/{id}/pdf:
     get:
       tags: [documents]
-      summary: PDF (signed copy if signed online; `?original=1` for the unsigned one; `?inline=1` to display)
+      summary: The generated PDF (`?inline=1` to display). The signed copy is the uploaded scan (`/scan`).
       parameters: [{ $ref: '#/components/parameters/id' }]
       responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
   /api/documents/{id}/docx:
@@ -406,7 +410,8 @@ paths:
   /api/documents/{id}/paper-signature:
     post:
       tags: [documents]
-      summary: Mark signed on paper and upload the scan (PDF/JPG/PNG)
+      summary: Record the handwritten signature with its scan (PDF/JPG/PNG) — the ONLY way to set "signed"
+      description: The scan is required. Allowed from created / sent / viewed / expired (late paper is accepted). Revokes open links and stops reminders.
       parameters: [{ $ref: '#/components/parameters/id' }]
       requestBody:
         required: true
@@ -420,7 +425,8 @@ paths:
                 signerName: { type: string }
                 signedAt: { type: string, format: date-time }
       responses:
-        '201': { description: Signature recorded }
+        '201': { description: Signature recorded (method `paper`) }
+        '400': { description: Missing scan or wrong file type }
         '409': { description: DOCUMENT_FINAL }
   /api/documents/resend-new-version:
     post:
@@ -471,38 +477,29 @@ paths:
     get:
       tags: [sign]
       security: []
-      summary: Document info for the signer; first open marks the document as viewed
+      summary: Document info for the recipient; first open marks the document as viewed
+      description: |
+        Works after the deadline too: a waiting document is then marked `expired` and returned with that status.
+        Signed and declined documents stay readable. There is no POST on this path (online signing was removed): 404.
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SignView' } } } }
         '404': { description: Unknown token }
-        '410': { description: TOKEN_EXPIRED / TOKEN_REVOKED }
-    post:
-      tags: [sign]
-      security: []
-      summary: Confirm ("I have read and agree"). Stores time, IP, user agent; re-renders the PDF with ☑.
-      requestBody:
-        required: true
-        content: { application/json: { schema: { type: object, required: [agree], properties: { agree: { type: boolean, enum: [true] } } } } }
-      responses:
-        '200': { description: Signed, content: { application/json: { schema: { type: object, properties: { status: { type: string }, signedAt: { type: string, format: date-time }, documentNumber: { type: string } } } } } }
-        '400': { description: agree must be true }
-        '409': { description: ALREADY_SIGNED / ALREADY_DECLINED }
-        '410': { description: TOKEN_EXPIRED / TOKEN_REVOKED }
+        '410': { description: TOKEN_REVOKED (a newer link was sent) }
   /api/sign/{token}/pdf:
     get:
       tags: [sign]
       security: []
-      summary: The document PDF (signed copy after signing)
+      summary: The document PDF (with the ☐ box to sign next to); also after the deadline
       parameters: [{ $ref: '#/components/parameters/token' }]
-      responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+      responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } }, '410': { description: TOKEN_REVOKED } }
   /api/sign/{token}/decline:
     post:
       tags: [sign]
       security: []
-      summary: Decline
+      summary: Decline (only before the deadline)
       parameters: [{ $ref: '#/components/parameters/token' }]
       requestBody: { content: { application/json: { schema: { type: object, properties: { reason: { type: string } } } } } }
-      responses: { '200': { description: Declined }, '409': { description: ALREADY_SIGNED / ALREADY_DECLINED } }
+      responses: { '200': { description: Declined }, '409': { description: ALREADY_SIGNED / ALREADY_DECLINED }, '410': { description: TOKEN_EXPIRED (deadline passed) / TOKEN_REVOKED } }
 
   /api/audit-log:
     get:
@@ -726,9 +723,8 @@ components:
         versionNumber: { type: integer }
         isCurrentVersion: { type: boolean }
         signedAt: { type: string, format: date-time, nullable: true }
-        signatureMethod: { type: string, enum: [online, paper], nullable: true }
+        signatureMethod: { type: string, enum: [online, paper], nullable: true, description: 'The app records only `paper`; `online` is reserved for a future qualified digital signature' }
         hasScan: { type: boolean }
-        hasSignedPdf: { type: boolean }
         reminderCount: { type: integer }
     SignView:
       type: object

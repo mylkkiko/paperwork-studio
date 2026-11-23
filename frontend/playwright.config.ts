@@ -6,7 +6,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: ['screenshots.spec.ts', 'audit.spec.ts'],
+  testIgnore: ['screenshots.spec.ts', 'audit.spec.ts', 'paper-shots.spec.ts'],
   globalSetup: './e2e/global-setup.ts',
   timeout: 120_000,
   expect: { timeout: 15_000 },

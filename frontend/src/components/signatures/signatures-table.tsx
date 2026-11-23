@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Bell, FileSignature, FileText, Paperclip } from 'lucide-react';
+import { Bell, Paperclip, Upload } from 'lucide-react';
 import type { DocumentRow } from '@/lib/types';
 import { useFormat } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
@@ -94,10 +94,15 @@ export function SignaturesTable({ rows, selected, onSelect, onRemind, onPaper, o
             </TD>
             <TD className="tabular whitespace-nowrap">
               {d.signedAt ? (
-                <span className="flex items-center gap-1.5" title={`${t(`method.${d.signatureMethod}`)} · ${f.dateTime(d.signedAt)}`}>
-                  {d.signatureMethod === 'paper' ? <Paperclip className="h-3.5 w-3.5 text-text-muted" aria-hidden /> : <FileSignature className="h-3.5 w-3.5 text-text-muted" aria-hidden />}
-                  {f.date(d.signedAt)}
-                </span>
+                <div className="flex flex-col items-start gap-0.5">
+                  <span title={f.dateTime(d.signedAt)}>{f.date(d.signedAt)}</span>
+                  {/* the uploaded scan IS the signed copy */}
+                  {d.hasScan && (
+                    <button type="button" className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-accent-text hover:underline" onClick={() => onScan(d)} data-testid="view-scan">
+                      <Paperclip className="h-3.5 w-3.5" aria-hidden /> {t('scan')}
+                    </button>
+                  )}
+                </div>
               ) : (
                 <span className="text-text-muted">—</span>
               )}
@@ -112,13 +117,8 @@ export function SignaturesTable({ rows, selected, onSelect, onRemind, onPaper, o
                   </Button>
                 )}
                 {canPaperSign(d) && (
-                  <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => onPaper(d)} aria-label={t('paper')} title={t('paper')}>
-                    <Paperclip />
-                  </Button>
-                )}
-                {d.hasScan && (
-                  <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => onScan(d)} aria-label={t('scan')} title={t('scan')}>
-                    <FileText />
+                  <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => onPaper(d)} aria-label={t('paper')} title={t('paper')} data-testid="upload-scan">
+                    <Upload />
                   </Button>
                 )}
               </div>

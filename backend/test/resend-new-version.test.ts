@@ -29,7 +29,7 @@ beforeAll(async () => {
     overrides: { 'stu-002': { 'contract.amount': 400000 } }, // a discount for one student
   }));
   const tokens = await ctx.send(docs.map((d) => d.id));
-  await ctx.api.post(`/api/sign/${tokens[docs[0].id]}`).send({ agree: true }); // stu-001 signs online
+  await ctx.paperSign(docs[0].id, { file: Buffer.from([0xff, 0xd8, 0xff, 0xe0]), name: 's.jpg' }); // stu-001 hands in paper (JPG scan)
   await ctx.api.post(`/api/documents/${docs[1].id}/paper-signature`).set(ctx.auth('coordinator')).attach('file', Buffer.from('%PDF-1.4'), 's.pdf'); // stu-002 on paper
   await ctx.api.post(`/api/sign/${tokens[docs[2].id]}/decline`).send({}); // stu-003 declines; stu-004 never signs
 
@@ -46,7 +46,7 @@ describe('resend new version (S-6)', () => {
   it('the "signed an older version" filter finds exactly the two signers', async () => {
     const res = await ctx.api.get(`/api/signatures/table?templateId=${templateId}&olderVersion=true`).set(ctx.auth('coordinator'));
     expect(res.body.items.map((r: { recipientId: string; versionNumber: number; signatureMethod: string }) => [r.recipientId, r.versionNumber, r.signatureMethod])).toEqual([
-      ['stu-001', 1, 'online'],
+      ['stu-001', 1, 'paper'],
       ['stu-002', 1, 'paper'],
     ]);
   });
@@ -120,8 +120,7 @@ describe('resend new version (S-6)', () => {
   it('uses an edited summary when the editor changed it', async () => {
     // v3 with an edited summary; stu-001 signs v2, then v3 is published and resent
     const newV2Doc = newDocs[0];
-    const token = tokenFromMail(ctx.mailer.sent.filter((m) => m.to === 'anna.hakobyan@student.academy.am').at(-1)!.text)!;
-    await ctx.api.post(`/api/sign/${token}`).send({ agree: true });
+    await ctx.paperSign(newV2Doc.id);
     const up = await ctx.api.post(`/api/templates/${templateId}/versions`).set(ctx.auth('editor')).attach('file', seedFile('student_agreement_v1.docx'), 'v3.docx');
     await ctx.api.patch(`/api/templates/${templateId}/versions/${up.body.version.id}`).set(ctx.auth('editor')).send({ changeSummary: 'Վճարման ժամկետը վերադարձվել է 10 օրի։' });
     await ctx.api.post(`/api/templates/${templateId}/versions/${up.body.version.id}/publish`).set(ctx.auth('editor'));

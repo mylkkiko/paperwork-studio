@@ -177,9 +177,8 @@ function format(def: MergeField | undefined, value: unknown): string {
 }
 
 /** Text that replaces {{signature.checkbox}}. */
-export function signatureText(state: { signedAt?: string; method?: 'online' | 'paper' } = {}, locale = DEFAULT_LOCALE) {
-  if (!state.signedAt) return t(locale, 'signature.unsigned');
-  return t(locale, state.method === 'paper' ? 'signature.signedPaper' : 'signature.signedOnline', { date: state.signedAt });
+export function signatureText(locale = DEFAULT_LOCALE) {
+  return t(locale, 'signature.unsigned');
 }
 
 /** Template category -> who the documents are for. Used for preview data. */

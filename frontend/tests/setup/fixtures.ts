@@ -20,7 +20,6 @@ export const doc = (over: Partial<DocumentRow> = {}): DocumentRow => ({
   signedAt: null,
   signatureMethod: null,
   hasScan: false,
-  hasSignedPdf: false,
   reminderCount: 0,
   ...over,
 });

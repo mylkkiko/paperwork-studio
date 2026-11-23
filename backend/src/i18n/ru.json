@@ -1,8 +1,6 @@
 {
   "signature": {
-    "unsigned": "☐  Подпись: ____________",
-    "signedOnline": "☑  Подтверждено онлайн: {date}",
-    "signedPaper": "☑  Подписано на бумаге: {date}"
+    "unsigned": "☐  Подпись: ____________"
   },
   "summary": {
     "preamble": "Преамбула",
@@ -18,7 +16,12 @@
     "dateChanged": "{clause}: дата изменилась с {old} на {new}",
     "textChanged": "{clause}: изменена формулировка",
     "noChanges": "Изменений нет",
-    "unit": { "day": "дни", "month": "месяцы", "year": "годы", "hour": "часы" }
+    "unit": {
+      "day": "дни",
+      "month": "месяцы",
+      "year": "годы",
+      "hour": "часы"
+    }
   },
   "export": {
     "recipient": "Получатель",
@@ -40,7 +43,10 @@
     "declined": "Отклонён",
     "expired": "Просрочен"
   },
-  "method": { "online": "Онлайн", "paper": "На бумаге" },
+  "method": {
+    "online": "Онлайн",
+    "paper": "На бумаге"
+  },
   "warnings": {
     "UNKNOWN_FIELD": "Неизвестное поле: {field}",
     "CLAUSES_NOT_DETECTED": "Пункты не распознаны — преобразуйте нумерацию в обычный текст",

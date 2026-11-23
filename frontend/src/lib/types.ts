@@ -190,9 +190,9 @@ export interface DocumentRow {
   versionNumber: number;
   isCurrentVersion: boolean;
   signedAt: string | null;
+  /** The app records only `paper`; `online` is reserved for a future qualified digital signature. */
   signatureMethod: 'online' | 'paper' | null;
   hasScan: boolean;
-  hasSignedPdf: boolean;
   reminderCount: number;
 }
 
@@ -204,6 +204,7 @@ export interface SignView {
   status: DocumentStatus;
   expiresAt: string;
   signedAt: string | null;
+  /** The app records only `paper`; `online` is reserved for a future qualified digital signature. */
   signatureMethod: 'online' | 'paper' | null;
   declinedAt: string | null;
 }

@@ -4,19 +4,23 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { Api, linkFrom, unique, waitForMail } from './api';
+import { Api, expireLinks, linkFrom, unique, waitForMail } from './api';
 import { loginAs } from './helpers';
 
 let templateId = '';
 let signLink = '';
+let expiredLink = '';
 
 test.beforeAll(async () => {
   const editor = await Api.as('editor');
   const coord = await Api.as('coordinator');
   ({ templateId } = await editor.createPublishedTemplate(unique('A11y')));
-  const docs = await coord.generate(templateId, ['stu-020']);
-  await coord.send([docs['stu-020'].id]);
+  const docs = await coord.generate(templateId, ['stu-020', 'stu-021', 'stu-022']);
+  await coord.send([docs['stu-020'].id, docs['stu-021'].id, docs['stu-022'].id]);
   signLink = linkFrom((await waitForMail(docs['stu-020'].recipientEmail, docs['stu-020'].number)).text);
+  expiredLink = linkFrom((await waitForMail(docs['stu-021'].recipientEmail, docs['stu-021'].number)).text);
+  expireLinks(docs['stu-021'].id);
+  await coord.paperSign(docs['stu-022'].id); // a signed row with a "View scan" link
   await editor.uploadAndPublishVersion(templateId); // so the compare page has a comparison
 });
 
@@ -35,12 +39,15 @@ for (const theme of ['light', 'dark'] as const) {
   test.describe(`${theme} theme`, () => {
     test.use({ colorScheme: theme });
 
-    test('public pages: login, signing page', async ({ page }) => {
+    test('public pages: login, document page (open, deadline passed)', async ({ page }) => {
       await page.goto('/login');
       await audit(page, 'login');
       await page.goto(signLink);
-      await expect(page.getByTestId('confirm-sign')).toBeVisible();
-      await audit(page, 'sign');
+      await expect(page.getByTestId('sign-instruction')).toBeVisible();
+      await audit(page, 'document page');
+      await page.goto(expiredLink);
+      await expect(page.getByTestId('sign-expired')).toBeVisible();
+      await audit(page, 'document page (deadline passed)');
     });
 
     test('editor screens: dashboard, templates, template detail, compare', async ({ page }) => {
@@ -63,8 +70,12 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(page.getByRole('radio').first()).toBeVisible();
       await audit(page, 'wizard');
       await page.goto(`/signatures?templateId=${templateId}`);
-      await expect(page.getByTestId('sig-row-stu-020')).toBeVisible();
+      await expect(page.getByTestId('sig-row-stu-022').getByTestId('view-scan')).toBeVisible();
       await audit(page, 'signatures');
+      await page.getByTestId('sig-row-stu-020').getByTestId('upload-scan').click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.waitForTimeout(400); // dialog animation
+      await audit(page, 'paper signature dialog');
     });
 
     test('admin screens: users, merge fields', async ({ page }) => {

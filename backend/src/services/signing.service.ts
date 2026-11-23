@@ -1,26 +1,27 @@
 /**
- * Public, token-based signing (S-2). No login: the token in the link is the credential.
+ * Public, token-based document page (S-2). No login: the token in the link is the credential.
  *
- *  view()    GET  /api/sign/:token       document info; first open moves sent -> viewed
- *  pdf()     GET  /api/sign/:token/pdf   the PDF (signed copy after signing)
- *  sign()    POST /api/sign/:token       { agree: true } -> Signature row, ☑ PDF, status signed
+ * Signatures are handwritten on paper. The public link only DELIVERS the document; nothing on it can set a
+ * document to "signed" — only the coordinator's paper-signature action (with the uploaded scan) can.
+ *
+ *  view()    GET  /api/sign/:token          document info; first open moves sent -> viewed
+ *  pdf()     GET  /api/sign/:token/pdf      the document PDF (with the ☐ box to sign next to)
  *  decline() POST /api/sign/:token/decline
  *
- * Token states:
- *  - unknown hash          -> 404 INVALID_TOKEN
- *  - past expiresAt        -> 410 TOKEN_EXPIRED (document marked expired if it was still waiting)
- *  - revoked (replaced by a newer link) -> 410 TOKEN_REVOKED
- *  - document signed/declined -> view/pdf still work (read-only receipt); sign/decline -> 409
+ * The link lifetime (SIGN_LINK_TTL_DAYS, default 14) is the deadline to hand in the signed paper document.
  *
- * After a successful signature all links of the document are revoked, so a token can sign only once.
+ * Token states:
+ *  - unknown hash                         -> 404 INVALID_TOKEN
+ *  - revoked (replaced by a newer link)   -> 410 TOKEN_REVOKED (unless the document is signed/declined)
+ *  - past the deadline                    -> view/pdf still work (the page shows "deadline passed");
+ *                                            the document is marked expired if it was still waiting;
+ *                                            decline -> 410 TOKEN_EXPIRED
+ *  - document signed/declined             -> view/pdf still work (read-only); decline -> 409
  */
 import type { Deps } from '../deps';
 import { conflict, gone, notFound } from '../lib/errors';
-import * as docx from './docx.service';
 import type { AuditService } from './audit.service';
 import type { SignLinksService } from './sign-links.service';
-import { signatureText } from './recipients.service';
-import { formatDateTimeHy } from './formatters';
 
 export interface ClientInfo {
   ip?: string | null;
@@ -35,33 +36,34 @@ export class SigningService {
   ) {}
 
   /**
-   * Resolve a token. `allowFinal` lets view/pdf show signed/declined documents even though their links are
-   * revoked by the signature itself.
+   * Resolve a token.
+   *  - 'read'   (view, pdf): works for final documents and after the deadline.
+   *  - 'decline': only while the document is waiting and the deadline has not passed.
    */
-  private async resolve(token: string, opts: { allowFinal: boolean }) {
+  private async resolve(token: string, mode: 'read' | 'decline') {
     const req = await this.links.findByToken(token);
     if (!req) throw notFound('Signing link');
-    const doc = req.document;
+    let doc = req.document;
     const isFinal = doc.status === 'signed' || doc.status === 'declined';
-    if (isFinal && opts.allowFinal) return req;
+    if (isFinal && mode === 'read') return { req, doc };
     if (isFinal) throw conflict(doc.status === 'signed' ? 'ALREADY_SIGNED' : 'ALREADY_DECLINED', `Document is already ${doc.status}`);
+    if (req.revokedAt) throw gone('TOKEN_REVOKED', 'This link has been replaced by a newer one');
+
     if (req.expiresAt <= this.d.clock.now()) {
-      if (doc.status === 'sent' || doc.status === 'viewed') {
-        // Only mark expired if no other link is still valid.
-        if (!(await this.links.activeRequest(doc.id))) {
-          await this.d.prisma.document.update({ where: { id: doc.id }, data: { status: 'expired' } });
-          await this.audit.log(null, 'document.expired', 'Document', doc.id, {});
-        }
+      // Only mark expired if no other link is still valid (same rule as the scheduled job).
+      if ((doc.status === 'sent' || doc.status === 'viewed') && !(await this.links.activeRequest(doc.id))) {
+        doc = { ...doc, ...(await this.d.prisma.document.update({ where: { id: doc.id }, data: { status: 'expired' } })) };
+        await this.audit.log(null, 'document.expired', 'Document', doc.id, {});
       }
-      throw gone('TOKEN_EXPIRED', 'This signing link has expired');
+      if (mode === 'decline') throw gone('TOKEN_EXPIRED', 'The deadline for this document has passed');
     }
-    if (req.revokedAt) throw gone('TOKEN_REVOKED', 'This signing link has been replaced by a newer one');
-    return req;
+    if (mode === 'decline' && doc.status === 'expired') throw gone('TOKEN_EXPIRED', 'The deadline for this document has passed');
+    return { req, doc };
   }
 
   async view(token: string, client: ClientInfo) {
-    const req = await this.resolve(token, { allowFinal: true });
-    let doc = req.document;
+    const { req, doc: resolved } = await this.resolve(token, 'read');
+    let doc = resolved;
     if (doc.status === 'sent') {
       doc = { ...doc, ...(await this.d.prisma.document.update({ where: { id: doc.id }, data: { status: 'viewed', viewedAt: this.d.clock.now() } })) };
       await this.audit.log(null, 'document.viewed', 'Document', doc.id, { ip: client.ip, userAgent: client.userAgent });
@@ -81,41 +83,12 @@ export class SigningService {
   }
 
   async pdf(token: string) {
-    const req = await this.resolve(token, { allowFinal: true });
-    const doc = req.document;
-    return { buffer: await this.d.storage.get(doc.signedPdfPath ?? doc.pdfPath), fileName: `${doc.number}.pdf` };
-  }
-
-  async sign(token: string, client: ClientInfo) {
-    const req = await this.resolve(token, { allowFinal: false });
-    const doc = req.document;
-    const now = this.d.clock.now();
-
-    // Re-render from the SAME template version and the SAME data snapshot, only the checkbox changes to ☑.
-    const values = { ...(doc.dataSnapshot as Record<string, string>), 'signature.checkbox': signatureText({ signedAt: formatDateTimeHy(now), method: 'online' }) };
-    const filled = docx.render(await this.d.storage.get(doc.templateVersion.filePath), values);
-    const signedPdf = await this.d.pdf.docxToPdf(filled, `${doc.number}-signed.docx`);
-    const signedPdfPath = `documents/${doc.batchId}/${doc.number}-signed.pdf`;
-    await this.d.storage.put(signedPdfPath, signedPdf);
-
-    // The status check inside the transaction guards against two tabs confirming at the same time.
-    const signature = await this.d.prisma.$transaction(async (tx) => {
-      const updated = await tx.document.updateMany({
-        where: { id: doc.id, status: { in: ['sent', 'viewed'] } },
-        data: { status: 'signed', signedPdfPath, viewedAt: doc.viewedAt ?? now },
-      });
-      if (updated.count === 0) throw conflict('ALREADY_SIGNED', 'Document is already signed');
-      await tx.signatureRequest.updateMany({ where: { documentId: doc.id, revokedAt: null }, data: { revokedAt: now } });
-      return tx.signature.create({
-        data: { documentId: doc.id, method: 'online', signerName: doc.recipientName, signedAt: now, ip: client.ip ?? null, userAgent: client.userAgent?.slice(0, 500) ?? null },
-      });
-    });
-    await this.audit.log(null, 'document.signed', 'Document', doc.id, { method: 'online', ip: client.ip, userAgent: client.userAgent, signatureId: signature.id });
-    return { status: 'signed' as const, signedAt: signature.signedAt, documentNumber: doc.number };
+    const { doc } = await this.resolve(token, 'read');
+    return { buffer: await this.d.storage.get(doc.pdfPath), fileName: `${doc.number}.pdf` };
   }
 
   async decline(token: string, reason: string | undefined, client: ClientInfo) {
-    const req = await this.resolve(token, { allowFinal: false });
+    const { req } = await this.resolve(token, 'decline');
     const now = this.d.clock.now();
     await this.d.prisma.$transaction([
       this.d.prisma.document.update({ where: { id: req.documentId }, data: { status: 'declined', declinedAt: now, declineReason: reason ?? null } }),

@@ -11,9 +11,10 @@ import { ErrorState, LoadingState } from './states';
  * Shows a PDF in an <iframe>.
  *  - `src`: a public URL (signing page)
  *  - `apiPath`: a protected API path; fetched with the JWT and shown from a blob URL
- * Mobile browsers often can't display PDFs inline, so there is always an "open" link as well.
+ * Mobile browsers often can't display PDFs inline, so there is always an "open" link as well
+ * (`mobileOpen={false}` when the page already has its own open/download button).
  */
-export function PdfViewer({ src, apiPath, title, className }: { src?: string; apiPath?: string; title: string; className?: string }) {
+export function PdfViewer({ src, apiPath, title, className, mobileOpen = true }: { src?: string; apiPath?: string; title: string; className?: string; mobileOpen?: boolean }) {
   const t = useTranslations('common');
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -43,14 +44,18 @@ export function PdfViewer({ src, apiPath, title, className }: { src?: string; ap
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {/* Phones usually cannot show a PDF inside a page: a big "open" button instead of an empty frame. */}
-      <a href={url} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-md border bg-surface-muted p-6 text-base font-medium text-accent-text sm:hidden" data-testid="open-pdf-mobile">
-        <FileText className="h-5 w-5" aria-hidden /> {t('openDocument')}
-      </a>
+      {mobileOpen && (
+        <a href={url} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-md border bg-surface-muted p-6 text-base font-medium text-accent-text sm:hidden" data-testid="open-pdf-mobile">
+          <FileText className="h-5 w-5" aria-hidden /> {t('openDocument')}
+        </a>
+      )}
       {/* the page itself stays white in both themes */}
       <iframe src={url} title={title} className="hidden h-[70vh] min-h-[420px] w-full rounded-md border border-border-strong/40 bg-paper [color-scheme:light] sm:block" />
-      <a href={url} target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 self-start rounded-sm text-sm text-accent-text hover:underline sm:inline-flex">
-        <ExternalLink className="h-4 w-4" aria-hidden /> {t('openPdf')}
-      </a>
+      {mobileOpen && (
+        <a href={url} target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 self-start rounded-sm text-sm text-accent-text hover:underline sm:inline-flex">
+          <ExternalLink className="h-4 w-4" aria-hidden /> {t('openPdf')}
+        </a>
+      )}
     </div>
   );
 }

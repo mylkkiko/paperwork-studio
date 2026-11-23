@@ -2,14 +2,16 @@
  * The six E2E scenarios of the spec, in order, against the real stack:
  *   1 editor: new version -> comparison + summary -> publish
  *   2 coordinator: generate the 24-student pack -> download ZIP -> send
- *   3 signer: link from Mailpit -> tick -> sign; coordinator sees "signed" on the right version
+ *   3 signer: link from Mailpit -> reads the document + instruction (no sign button);
+ *     coordinator uploads the scan of the signed paper -> "signed" on the right version
  *   4 coordinator: reminder -> email in Mailpit
  *   5 coordinator: "signed an older version" -> resend new version
- *   6 expired link -> expired state
+ *   6 deadline passed -> the page still shows the document with a note; no decline
+ *   7 signer declines via the link
  */
 import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
-import { Api, expireLinks, linkFrom, seedFile, signViaApi, unique, waitForMail } from './api';
+import { Api, expireLinks, linkFrom, SCAN_PDF, seedFile, unique, waitForMail } from './api';
 import { loginAs } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
@@ -96,29 +98,59 @@ test('2. coordinator generates the 24-student pack, downloads the ZIP and sends 
   await expect(page.getByTestId('send-result')).toHaveText('Ուղարկված՝ 24։ Չուղարկված՝ 0։');
 });
 
-test('3. signer signs via the link from Mailpit; coordinator sees "signed" on version 2', async ({ page, browser }) => {
+test('3. signer reads the document from the Mailpit link; coordinator uploads the scan -> "signed" on version 2', async ({ page, browser }) => {
   const docs = await (await Api.as('coordinator')).documents({ templateId: templateA.templateId });
   const anna = docs['stu-001'];
   expect(anna.versionNumber).toBe(2);
   const mail = await waitForMail(anna.recipientEmail, anna.number);
   expect(mail.subject).toBe(`Ստորագրման համար՝ ${titleA} № ${anna.number}`);
+  expect(mail.text).toContain('Տպեք փաստաթուղթը, ստորագրեք ձեռքով ☐ վանդակի կողքին և հանձնեք այն Ձեր համակարգողին մինչև');
+  expect(mail.text).not.toMatch(/հաստատ|առցանց/);
 
+  // signer: sees the document and the instruction; nothing to click that would "sign"
   const signer = await (await browser.newContext({ locale: 'hy-AM' })).newPage();
-  await signer.goto(linkFrom(mail.text));
+  const link = linkFrom(mail.text);
+  await signer.goto(link);
   await expect(signer.getByText(`№ ${anna.number} · տարբերակ 2 · Աննա Հակոբյան`)).toBeVisible();
-  await expect(signer.getByTestId('confirm-sign')).toBeDisabled();
-  await signer.getByRole('checkbox', { name: 'Ծանոթացել եմ փաստաթղթին և համաձայն եմ' }).check();
-  await signer.getByTestId('confirm-sign').click();
-  await expect(signer.getByTestId('sign-success')).toContainText('Շնորհակալություն, փաստաթուղթը հաստատված է։');
-  await signer.context().close();
+  const how = signer.getByTestId('sign-instruction');
+  await expect(how).toContainText('Ներբեռնեք կամ տպեք փաստաթուղթը։');
+  await expect(how).toContainText('Ստորագրեք ձեռքով ☐ վանդակի կողքին։');
+  await expect(how).toContainText('Ստորագրված թուղթը հանձնեք Ձեր համակարգողին');
+  await expect(signer.getByTestId('download-pdf')).toHaveText('Ներբեռնել / Տպել');
+  await expect(signer.locator('iframe')).toBeVisible();
+  await expect(signer.getByTestId('confirm-sign')).toHaveCount(0);
+  await expect(signer.getByRole('checkbox')).toHaveCount(0);
+  await expect(signer.getByRole('button', { name: /Հաստատել|Ստորագրել/ })).toHaveCount(0);
 
+  // coordinator: the row is "viewed"; uploading the scan is the only way to "signed"
   await loginAs(page, 'coordinator');
   await page.goto(`/signatures?templateId=${templateA.templateId}`);
   const row = page.getByTestId('sig-row-stu-001');
+  await expect(row).toHaveAttribute('data-status', 'viewed');
+  await row.getByTestId('upload-scan').click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Սկանը պարտադիր է');
+  await dialog.getByRole('button', { name: 'Նշել որպես ստորագրված' }).click();
+  await expect(dialog.getByText('Ընտրեք մեկ PDF, JPG կամ PNG ֆայլ։')).toBeVisible(); // no scan -> not accepted
+  await expect(row).toHaveAttribute('data-status', 'viewed');
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'scan.pdf', mimeType: 'application/pdf', buffer: SCAN_PDF });
+  await dialog.getByRole('button', { name: 'Նշել որպես ստորագրված' }).click();
+  await expect(page.getByText('Աննա Հակոբյան-ի թղթային ստորագրությունը գրանցվեց։')).toBeVisible();
   await expect(row).toHaveAttribute('data-status', 'signed');
   await expect(row).toContainText('v2');
   await expect(row).toContainText('ընթացիկ');
   await expect(row).toContainText('Ստորագրված');
+  // the scan is the signed copy
+  const viewScan = row.getByTestId('view-scan');
+  await expect(viewScan).toHaveText('Դիտել սկանը');
+  const [scanTab] = await Promise.all([page.context().waitForEvent('page'), viewScan.click()]);
+  await scanTab.close();
+
+  // the signer's link now says "signed on paper"
+  await signer.reload();
+  await expect(signer.getByTestId('sign-success')).toContainText('Ստորագրված փաստաթուղթը ստացված է։');
+  await expect(signer.getByTestId('sign-success')).toContainText('Ստորագրվել է թղթային տարբերակով՝');
+  await signer.context().close();
 });
 
 test('4. coordinator sends a reminder; it arrives in Mailpit', async ({ page }) => {
@@ -132,7 +164,7 @@ test('4. coordinator sends a reminder; it arrives in Mailpit', async ({ page }) 
   await expect(page.getByText('Հիշեցումն ուղարկվեց՝ Դավիթ Գրիգորյան։')).toBeVisible();
 
   const mail = await waitForMail(davit.recipientEmail, 'Հիշեցում', davit.number);
-  expect(mail.text).toContain('դեռ հաստատված չէ');
+  expect(mail.text).toContain('ստորագրված օրինակը դեռ չի հանձնվել');
   expect(mail.text).toMatch(/\/sign\/[A-Za-z0-9_-]{43}/);
   await expect(row.locator('td').nth(7)).toHaveText('1'); // reminder counter
   // the signed document offers no reminder
@@ -148,7 +180,7 @@ test('5. coordinator filters "signed an older version" and resends the new versi
   const docs = await coord.generate(templateId, ['stu-005', 'stu-006']);
   await coord.send([docs['stu-005'].id, docs['stu-006'].id]);
   const lilit = docs['stu-005'];
-  await signViaApi(linkFrom((await waitForMail(lilit.recipientEmail, lilit.number)).text));
+  await coord.paperSign(lilit.id); // stu-005 hands in v1 on paper
   await editor.uploadAndPublishVersion(templateId);
 
   await loginAs(page, 'coordinator');
@@ -174,17 +206,42 @@ test('5. coordinator filters "signed an older version" and resends the new versi
   await expect(rows.filter({ hasText: 'v2' })).toHaveAttribute('data-status', 'sent');
 });
 
-test('6. an expired link shows the expired state', async ({ page }) => {
+test('6. after the deadline the page still shows the document with a note; no decline', async ({ page }) => {
   const docs = await (await Api.as('coordinator')).documents({ templateId: templateA.templateId });
   const aram = docs['stu-004'];
   const link = linkFrom((await waitForMail(aram.recipientEmail, aram.number)).text);
   expireLinks(aram.id);
 
   await page.goto(link);
-  await expect(page.getByTestId('sign-expired')).toContainText('Հղման ժամկետն անցել է');
+  const note = page.getByTestId('sign-expired');
+  await expect(note).toContainText('Հանձնման ժամկետն անցել է');
+  await expect(note).toContainText('Խնդրում ենք կապվել Ձեր համակարգողի հետ։');
+  await expect(page.getByText(`№ ${aram.number}`)).toBeVisible();
+  await expect(page.locator('iframe')).toBeVisible();
+  await expect(page.getByTestId('download-pdf')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Համաձայն չեմ' })).toHaveCount(0);
   await expect(page.getByTestId('confirm-sign')).toHaveCount(0);
 
   await loginAs(page, 'coordinator');
   await page.goto(`/signatures?templateId=${templateA.templateId}`);
   await expect(page.getByTestId('sig-row-stu-004')).toHaveAttribute('data-status', 'expired');
+});
+
+test('7. signer declines via the link; coordinator sees "declined"', async ({ page, browser }) => {
+  const docs = await (await Api.as('coordinator')).documents({ templateId: templateA.templateId });
+  const mariam = docs['stu-003'];
+  const signer = await (await browser.newContext({ locale: 'hy-AM' })).newPage();
+  await signer.goto(linkFrom((await waitForMail(mariam.recipientEmail, mariam.number)).text));
+  await signer.getByRole('button', { name: 'Համաձայն չեմ' }).click();
+  await signer.getByLabel('Պատճառը (ըստ ցանկության)').fill('Գումարը սխալ է');
+  await signer.getByRole('button', { name: 'Մերժել փաստաթուղթը' }).click();
+  await expect(signer.getByTestId('sign-declined')).toContainText('Փաստաթուղթը մերժվել է։');
+  await expect(signer.getByRole('button', { name: 'Համաձայն չեմ' })).toHaveCount(0);
+  await signer.context().close();
+
+  await loginAs(page, 'coordinator');
+  await page.goto(`/signatures?templateId=${templateA.templateId}`);
+  const row = page.getByTestId('sig-row-stu-003');
+  await expect(row).toHaveAttribute('data-status', 'declined');
+  await expect(row.getByTestId('upload-scan')).toHaveCount(0);
 });

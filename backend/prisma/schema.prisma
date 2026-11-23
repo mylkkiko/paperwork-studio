@@ -64,6 +64,8 @@ enum DocumentStatus {
   expired
 }
 
+/// How a document was signed. The app records only `paper` (handwritten + scan). `online` is kept as the
+/// extension point for a future qualified digital signature (Armenian ID card / mobile ID); nothing creates it now.
 enum SignatureMethod {
   online
   paper
@@ -182,7 +184,6 @@ model Document {
   dataSnapshot      Json
   pdfPath           String
   docxPath          String
-  signedPdfPath     String?
   status            DocumentStatus     @default(created)
   sentAt            DateTime?
   viewedAt          DateTime?

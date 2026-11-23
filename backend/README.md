@@ -1,7 +1,8 @@
 # Paperwork Studio — Backend
 
 REST API for Armenian document templates: upload `.docx` templates with `{{merge.fields}}`, generate PDF + Word packs
-for a whole group, compare template versions clause by clause, and collect online/paper signatures with reminders.
+for a whole group, compare template versions clause by clause, and collect handwritten (paper) signatures with reminders: the emailed link delivers the document, the coordinator
+uploads the scan of the signed paper.
 
 Node.js 20 · Express 5 · TypeScript · PostgreSQL 16 + Prisma · BullMQ + Redis · docxtemplater · Gotenberg (LibreOffice) · Mailpit
 
@@ -115,7 +116,7 @@ cd backend && npm test
 - Time is controlled with an injectable `FixedClock` (link expiry, reminder schedule), not real waiting.
 - Most tests use a fast fake PDF converter that records what would have been printed;
   [test/armenian-pdf.test.ts](test/armenian-pdf.test.ts) uses the real Gotenberg and checks the extracted PDF text
-  (Armenian dates, `450 000 ֏`, ☐/☑, fonts) plus the 24-document timing.
+  (Armenian dates, `450 000 ֏`, the ☐ signature line, fonts) plus the 24-document timing.
 
 | File | Covers |
 | --- | --- |
@@ -123,8 +124,8 @@ cd backend && npm test
 | `templates` | field extraction incl. split runs, unknown fields, upload warnings (incl. auto-numbering), version lifecycle and immutability, preview, delete |
 | `clauses-compare` | clause splitting, v1/v2 demo, renumbering fixture, word diff, summary rules |
 | `generation` | precheck, exclusions, invalid values, 24 documents, numbers, snapshots, ZIP/merged PDF, retry without duplicates, staff/partners |
-| `signing` | tokens (hash, once, wrong, expired, revoked), IP/UA, ☑ re-render, decline, paper scans, expiry never touches signed/declined, old + reminder links both valid |
-| `reminders` | schedule (day 2/5, no duplicates, late runs, restart on resend, configurable), manual reminders |
+| `signing` | tokens (hash, wrong, revoked), view-only link (POST → 404, nothing public can set "signed"), decline, paper signature only with a scan, the 14-day deadline (only sent/viewed expire, link still shows the document, decline refused, late paper accepted, send again), old + reminder links both valid |
+| `reminders` | schedule (day 2/5, no duplicates, late runs, restart on resend, configurable), stop after the scan is uploaded, manual reminders, email wording |
 | `resend-new-version` | S-6: manual values carried over, Core Engine read fresh, new version linked, summary in email |
 | `exports`, `admin`, `formatters`, `armenian-pdf` | table/CSV/XLSX, users + dictionary, Armenian formatting, real PDF rendering |
 
@@ -135,7 +136,7 @@ cd backend && npm test
 Full spec: [openapi.yaml](openapi.yaml) (OpenAPI 3.0; 44 operations, checked against the Express routes).
 
 All errors are `{"error": {"code": "...", "message": "...", "details": ...}}` with a matching HTTP status
-(400 validation, 401 no/invalid token, 403 role, 404, 409 state conflict, 410 expired link, 422 business rule).
+(400 validation, 401 no/invalid token, 403 role, 404, 409 state conflict, 410 replaced link / decline after the deadline, 422 business rule).
 
 | Role | Can |
 | --- | --- |
@@ -188,10 +189,11 @@ curl -so pack.pdf $API/batches/$BATCH/merged-pdf -H "authorization: Bearer $COOR
 curl -s $API/documents/send -H "authorization: Bearer $COORD" -H 'content-type: application/json' \
   -d "$(curl -s "$API/documents?batchId=$BATCH" -H "authorization: Bearer $COORD" | jq -c '{documentIds:[.items[].id]}')"
 
-# 6. Signer: token comes from the email link http://localhost:3100/sign/<TOKEN>
+# 6. Recipient: token comes from the email link http://localhost:3100/sign/<TOKEN>
 curl -s $API/sign/$TOKEN                                               # info; marks "viewed"
-curl -s -X POST $API/sign/$TOKEN -H 'content-type: application/json' -d '{"agree":true}'
-curl -so signed.pdf $API/sign/$TOKEN/pdf                               # PDF with ☑ and confirmation time
+curl -so document.pdf $API/sign/$TOKEN/pdf                             # print it, sign by hand next to ☐
+# Coordinator: the scan of the signed paper is the ONLY way to "signed" (file required)
+curl -s $API/documents/$DOC/paper-signature -H "authorization: Bearer $COORD" -F file=@scan.pdf -F signedAt=2026-11-22
 
 # 7. Remind someone who hasn't signed, then look at the table / export
 curl -s -X POST $API/documents/$DOC/remind -H "authorization: Bearer $COORD"

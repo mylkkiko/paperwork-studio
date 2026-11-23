@@ -129,8 +129,8 @@ frontend/
   as `warnings` (template is still saved as draft) and **block publishing** until fixed or added to the dictionary.
 - Values are formatted by dictionary `type`: `date` → `21 նոյեմբերի 2026 թ.`, `money` → `150 000 ֏`
   (non-breaking space as thousands separator), `number` → grouped digits, `text` → as-is.
-- `{{signature.checkbox}}` is a system field: unsigned → `☐  Ստորագրություն՝ ____________`;
-  signed online → `☑  Հաստատված է առցանց՝ 21 նոյեմբերի 2026 թ., 14:32`.
+- `{{signature.checkbox}}` is a system field: `☐  Ստորագրություն՝ ____________`. The recipient signs by hand next to
+  it (see §12: signatures are paper-only; there is no re-rendered ☑ copy, the uploaded scan is the signed copy).
 
 ### 2.2 Generation pipeline (BullMQ job per batch)
 1. Load published version + recipients from `CoreEngineClient`, apply precheck overrides and exclusions.
@@ -171,9 +171,9 @@ the UI can re-render the summary in `en`). Editable while draft; locked on publi
 ### 2.6 Signing tokens (S-2)
 - `crypto.randomBytes(32)` → base64url (43 chars) in the link only. DB stores `sha256(token)` hex.
 - Lookup by hash (unique index); constant-time compare not needed because lookup is by hash equality.
-- Expiry `SIGN_LINK_TTL_DAYS` (default 14). One active request per document; resending creates a new one
-  and invalidates older ones. After signing/declining the token is "used": GET still shows a read-only
-  "already signed" state, POST is rejected with 409.
+- Expiry `SIGN_LINK_TTL_DAYS` (default 14) = the deadline to hand in the signed paper. One active request per
+  document; resending creates a new one and invalidates older ones. The link is view-only (see §12): GET/PDF keep
+  working after signing, declining and the deadline; decline is rejected after the deadline (410) or when final (409).
 
 ### 2.7 Reminders (S-5)
 - Pure function `dueReminders(doc, sentReminders, now, scheduleDays=[2,5])` → which reminder offsets are due.
@@ -269,8 +269,9 @@ termination act and enrollment letter v1 **published**.
    comparison. Once the editor edits the summary, the edited text is what is published and emailed (S-6).
 9. **Signer identity**: the signer is the document recipient; email comes from Core Engine. Staff and partner
    documents use the same flow.
-10. **Document statuses**: `expired` is set by the reminders job when the latest signature request expires
-    without a signature; resending a new link moves it back to `sent`.
+10. **Document statuses**: `expired` is set by the reminders job (or on opening the link) when the latest request
+    expires without a signature; resending a new link moves it back to `sent`. Since §12 a paper signature is still
+    accepted after expiry (`expired` → `signed`).
 11. **Coordinator can mark paper signature** on any non-signed, non-declined document (incl. `created`).
 12. **"Signed an older version"** (S-6) = a document whose status is `signed` and whose template version is
     not the template's current published version.
@@ -360,3 +361,25 @@ Known limitations of this build:
 - **Reminders** run hourly (configurable cron), so a "day 2" reminder can arrive up to an hour after the 48 h mark.
 - **E2E** expires a link by updating Postgres directly (waiting 14 days is not practical).
 - **Native date inputs** show the browser's date format, not the selected UI language.
+
+## 12. Change request: paper-only signatures
+
+A checkbox on a web page has no legal force for these documents; the handwritten signature on paper does.
+
+New flow: email with link → recipient opens and reads the document (`viewed`) → prints it, signs by hand next to the ☐
+box → hands it to the coordinator → coordinator uploads the scan → `signed`.
+
+| Area | Change |
+| --- | --- |
+| Public link | `GET /api/sign/:token` and `/pdf` only deliver the document; `POST /api/sign/:token` was removed (404). Nothing on the public link can set `signed`. `POST …/decline` stays (before the deadline). |
+| Signing | `signed` is set only by `POST /api/documents/:id/paper-signature`, scan (PDF/JPG/PNG) required. Allowed from created / sent / viewed / expired (late paper is accepted). |
+| Deadline | `SIGN_LINK_TTL_DAYS` (14) = deadline to hand in the paper. sent/viewed after the deadline → `expired`; the link still shows the document with "deadline passed, contact your coordinator"; decline → 410. Signed/declined never expire. Send again → new 14-day period, old link replaced. |
+| Reminders | Same schedule (day 2 and 5); stop once the scan is uploaded, the document is declined or expired. |
+| Emails | First email, reminder and new version: review, print, sign by hand next to the box, hand it to your coordinator by the deadline (Armenian). |
+| Documents | ☐ line unchanged. The "re-render with ☑" signed copy is removed; the scan is the signed copy. Migration `20261123120000_drop_signed_pdf_path` drops `Document.signedPdfPath`. |
+| Extension point | `Signature.method` / `SignatureMethod` keep `online` (unused) for a future qualified digital signature (Armenian ID card / mobile ID). The app records only `paper`. |
+| Frontend | `/sign/[token]` is a document page (PDF, Download / Print, instruction, decline; states open / signed on paper / declined / deadline passed). Signatures table: "Upload signed scan" (required), "View scan" on signed rows. |
+| S-6 | Resend new version and "signed an older version" work as before, based on paper signatures. |
+
+Screenshots: [docs/screenshots/paper-only/](screenshots/paper-only/).
+

@@ -33,7 +33,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     const declineLink = await link('stu-002');
     const expiredLink = await link('stu-003');
     const openLink = await link('stu-004');
-    await fetch(`http://localhost:4000/api${signLink.replace('/sign/', '/sign/')}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agree: true }) });
+    await coord.paperSign(docs['stu-001'].id); // signed = scan uploaded by the coordinator
     await fetch(`http://localhost:4000/api${declineLink}/decline`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
     expireLinks(docs['stu-003'].id);
     await editor.call(`/templates/${templateId}/versions`, {
@@ -46,8 +46,8 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
 
     // public signing page states
     await page.goto(openLink);
-    await expect(page.getByTestId('confirm-sign')).toBeVisible();
-    await shot('01-sign-ready', false);
+    await expect(page.getByTestId('sign-instruction')).toBeVisible();
+    await shot('01-sign-open', false);
     await page.goto(signLink);
     await expect(page.getByTestId('sign-success')).toBeVisible();
     await shot('02-sign-signed', false);
@@ -139,7 +139,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     await page.goto(`/signatures?templateId=${templateId}&olderVersion=1`);
     await shot('38-signatures-older-empty');
     await page.goto(`/signatures?templateId=${templateId}`);
-    await page.getByTestId('sig-row-stu-005').first().getByRole('button', { name: 'Թղթային' }).click();
+    await page.getByTestId('sig-row-stu-005').first().getByTestId('upload-scan').click();
     await page.waitForTimeout(400); // let the open animation finish
     await shot('39-paper-dialog', false);
     await page.keyboard.press('Escape');

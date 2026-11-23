@@ -22,21 +22,27 @@ describe('signature filters', () => {
 describe('SignaturesTable', () => {
   const rows = [
     doc({ id: 'a', recipientId: 'stu-001', status: 'sent' }),
-    doc({ id: 'b', recipientId: 'stu-002', status: 'signed', signedAt: '2026-11-22T10:00:00Z', signatureMethod: 'online', isCurrentVersion: false }),
+    doc({ id: 'b', recipientId: 'stu-002', status: 'signed', signedAt: '2026-11-22T10:00:00Z', signatureMethod: 'paper', hasScan: true, isCurrentVersion: false }),
     doc({ id: 'c', recipientId: 'stu-003', status: 'signed', signedAt: '2026-11-22T10:00:00Z', signatureMethod: 'paper', hasScan: true }),
     doc({ id: 'd', recipientId: 'stu-004', status: 'created' }),
     doc({ id: 'e', recipientId: 'stu-005', status: 'declined' }),
+    doc({ id: 'f', recipientId: 'stu-006', status: 'expired' }),
   ];
   const handlers = () => ({ onSelect: vi.fn(), onRemind: vi.fn(), onPaper: vi.fn(), onView: vi.fn(), onScan: vi.fn() });
 
   it('shows the actions each status allows', () => {
     renderWithProviders(<SignaturesTable rows={rows} selected={[]} {...handlers()} />);
-    const actions = (rid: string) => within(screen.getByTestId(`sig-row-${rid}`)).queryAllByRole('button').map((b) => b.getAttribute('aria-label')).filter(Boolean);
-    expect(actions('stu-001')).toEqual(['Remind', 'Paper']); // sent
-    expect(actions('stu-002')).toEqual([]); // signed online
-    expect(actions('stu-003')).toEqual(['Scan']); // signed on paper with a scan
-    expect(actions('stu-004')).toEqual(['Paper']); // created: can't remind before sending
+    const actions = (rid: string) =>
+      within(screen.getByTestId(`sig-row-${rid}`))
+        .queryAllByRole('button')
+        .map((b) => b.getAttribute('aria-label') ?? (b.dataset.testid === 'view-scan' ? b.textContent!.trim() : null))
+        .filter(Boolean);
+    expect(actions('stu-001')).toEqual(['Remind', 'Upload signed scan']); // sent
+    expect(actions('stu-002')).toEqual(['View scan']); // signed on paper (older version): the scan is the signed copy
+    expect(actions('stu-003')).toEqual(['View scan']);
+    expect(actions('stu-004')).toEqual(['Upload signed scan']); // created: can't remind before sending
     expect(actions('stu-005')).toEqual([]); // declined
+    expect(actions('stu-006')).toEqual(['Upload signed scan']); // expired: late paper is still accepted
   });
 
   it('marks current vs older versions', () => {
@@ -49,17 +55,19 @@ describe('SignaturesTable', () => {
     const h = handlers();
     renderWithProviders(<SignaturesTable rows={rows} selected={[]} {...h} />);
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select all' }));
-    expect(h.onSelect).toHaveBeenCalledWith(['a', 'd']);
+    expect(h.onSelect).toHaveBeenCalledWith(['a', 'd', 'f']); // expired can be sent again
     expect(within(screen.getByTestId('sig-row-stu-002')).getByRole('checkbox')).toBeDisabled();
   });
 
-  it('remind and paper buttons call back with the row', async () => {
+  it('remind, upload and view-scan buttons call back with the row', async () => {
     const h = handlers();
     renderWithProviders(<SignaturesTable rows={rows} selected={[]} {...h} />);
     await userEvent.click(within(screen.getByTestId('sig-row-stu-001')).getByRole('button', { name: 'Remind' }));
     expect(h.onRemind).toHaveBeenCalledWith(rows[0]);
-    await userEvent.click(within(screen.getByTestId('sig-row-stu-004')).getByRole('button', { name: 'Paper' }));
+    await userEvent.click(within(screen.getByTestId('sig-row-stu-004')).getByRole('button', { name: 'Upload signed scan' }));
     expect(h.onPaper).toHaveBeenCalledWith(rows[3]);
+    await userEvent.click(within(screen.getByTestId('sig-row-stu-003')).getByRole('button', { name: 'View scan' }));
+    expect(h.onScan).toHaveBeenCalledWith(rows[2]);
     await userEvent.click(screen.getAllByText('PS-2026-000001')[0]);
     expect(h.onView).toHaveBeenCalledWith(rows[0]);
   });
@@ -77,7 +85,7 @@ describe('Signatures page filters (MSW)', () => {
         const url = new URL(request.url);
         tableRequests.push(url);
         const older = url.searchParams.get('olderVersion') === 'true';
-        return HttpResponse.json({ items: older ? [doc({ status: 'signed', isCurrentVersion: false, signedAt: '2026-11-22T10:00:00Z', signatureMethod: 'online' })] : [doc(), doc({ id: 'd2', recipientId: 'stu-002' })] });
+        return HttpResponse.json({ items: older ? [doc({ status: 'signed', isCurrentVersion: false, signedAt: '2026-11-22T10:00:00Z', signatureMethod: 'paper', hasScan: true })] : [doc(), doc({ id: 'd2', recipientId: 'stu-002' })] });
       }),
     );
   };

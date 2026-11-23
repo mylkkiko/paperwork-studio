@@ -76,20 +76,16 @@ test('main screens', async ({ page, browser }) => {
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'hy-AM' });
   const signer = await phone.newPage();
   await signer.goto(link.replace(/^https?:\/\/[^/]+/, process.env.BASE_URL ?? 'http://localhost:3100'));
-  await expect(signer.getByTestId('confirm-sign')).toBeDisabled();
+  await expect(signer.getByTestId('sign-instruction')).toBeVisible();
   await signer.screenshot({ path: `${OUT}/14-sign-mobile.png` });
-  await signer.getByRole('checkbox').click();
-  await signer.getByTestId('confirm-sign').click();
-  await expect(signer.getByTestId('sign-success')).toBeVisible({ timeout: 30_000 });
-  await signer.screenshot({ path: `${OUT}/15-sign-success.png` });
   await signer.goto('/sign/this-token-does-not-exist-aaaaaaaaaaaaaaaaaaaaa');
   await expect(signer.getByTestId('sign-invalid')).toBeVisible();
   await signer.screenshot({ path: `${OUT}/16-sign-invalid.png` });
   await phone.close();
 
   await page.reload();
-  await expect(page.getByTestId('sig-row-stu-001')).toHaveAttribute('data-status', 'signed');
-  await page.getByTestId('sig-row-stu-002').getByRole('button', { name: 'Թղթային' }).click();
+  await expect(page.getByTestId('sig-row-stu-001')).toHaveAttribute('data-status', 'viewed');
+  await page.getByTestId('sig-row-stu-002').getByTestId('upload-scan').click();
   await shot(page, '17-paper-signature');
   await page.keyboard.press('Escape');
   await logout(page);
