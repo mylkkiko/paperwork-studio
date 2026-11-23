@@ -5,7 +5,8 @@ coverage/
 .env
 .env.*
 !.env.example
-storage/
+# runtime file store (STORAGE_DIR=./storage); not src/integrations/storage
+/backend/storage/
 playwright-report/
 test-results/
 .DS_Store
