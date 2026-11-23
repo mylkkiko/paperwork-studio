@@ -20,9 +20,10 @@ const schema = z.object({
   JWT_EXPIRES_IN: z.string().default('8h'),
   STORAGE_DIR: z.string().default('./storage'),
   GOTENBERG_URL: z.string().default('http://localhost:3010'),
-  /** smtp (default; local Mailpit or any SMTP server) | brevo (Brevo HTTP API, for hosts that block SMTP) */
-  MAIL_TRANSPORT: z.enum(['smtp', 'brevo']).default('smtp'),
+  /** smtp (default; local Mailpit or any SMTP server) | brevo / resend (HTTP APIs, for hosts that block SMTP) */
+  MAIL_TRANSPORT: z.enum(['smtp', 'brevo', 'resend']).default('smtp'),
   BREVO_API_KEY: blankAsUndefined,
+  RESEND_API_KEY: blankAsUndefined,
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().default(1025),
   SMTP_SECURE: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
@@ -55,10 +56,12 @@ export function parseConfig(env: NodeJS.ProcessEnv): Config {
         'remove MAIL_REDIRECT_TO (or use NODE_ENV=development/test). Refusing to start.',
     );
   }
-  if (parsed.MAIL_TRANSPORT === 'brevo') {
-    if (!parsed.BREVO_API_KEY) throw new Error('MAIL_TRANSPORT=brevo needs BREVO_API_KEY. Refusing to start.');
+  if (parsed.MAIL_TRANSPORT !== 'smtp') {
+    const t = parsed.MAIL_TRANSPORT;
+    const keyName = t === 'brevo' ? 'BREVO_API_KEY' : 'RESEND_API_KEY';
+    if (!(t === 'brevo' ? parsed.BREVO_API_KEY : parsed.RESEND_API_KEY)) throw new Error(`MAIL_TRANSPORT=${t} needs ${keyName}. Refusing to start.`);
     if (!/<[^<>\s]+@[^<>\s]+>\s*$|^[^<>\s]+@[^<>\s]+$/.test(parsed.MAIL_FROM.trim())) {
-      throw new Error(`MAIL_TRANSPORT=brevo needs MAIL_FROM with an email address, e.g. "Paperwork Studio <docs@example.org>". Refusing to start.`);
+      throw new Error(`MAIL_TRANSPORT=${t} needs MAIL_FROM with an email address, e.g. "Paperwork Studio <docs@example.org>". Refusing to start.`);
     }
   }
   return parsed;
@@ -68,8 +71,8 @@ export const config: Config = parseConfig(process.env);
 
 /** Logged at startup: which mail transport is active (never the key or password). */
 export function mailTransportInfo(c: Pick<Config, 'MAIL_TRANSPORT' | 'MAIL_FROM' | 'SMTP_HOST' | 'SMTP_PORT' | 'SMTP_SECURE' | 'SMTP_USER'>): string {
-  return c.MAIL_TRANSPORT === 'brevo'
-    ? `Mail transport: brevo (HTTPS API), sender ${c.MAIL_FROM}`
+  return c.MAIL_TRANSPORT !== 'smtp'
+    ? `Mail transport: ${c.MAIL_TRANSPORT} (HTTPS API), sender ${c.MAIL_FROM}`
     : `Mail transport: smtp ${c.SMTP_HOST}:${c.SMTP_PORT} (${c.SMTP_SECURE ? 'TLS' : 'STARTTLS if offered'}, ${c.SMTP_USER ? 'with login' : 'no login'}), sender ${c.MAIL_FROM}`;
 }
 
