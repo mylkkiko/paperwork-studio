@@ -53,6 +53,8 @@ services:
       DATABASE_URL: postgresql://paperwork:paperwork@postgres:5432/paperwork?schema=public
       REDIS_URL: redis://redis:6379
       GOTENBERG_URL: http://gotenberg:3000
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-smtp}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-mailpit}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_SECURE: ${SMTP_SECURE:-false}

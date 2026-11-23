@@ -91,7 +91,9 @@ See [.env.example](.env.example) for defaults.
 | `JWT_SECRET`, `JWT_EXPIRES_IN` | Access-token signing key (≥ 16 chars) and lifetime (`8h`) |
 | `STORAGE_DIR` | Where templates, generated documents and scans are stored. Never served statically. |
 | `GOTENBERG_URL` | PDF converter |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Outgoing mail (defaults: local Mailpit, no TLS, no login). `SMTP_SECURE=true` = TLS from the start (465); otherwise STARTTLS when offered |
+| `MAIL_TRANSPORT` | `smtp` (default) or `brevo` (Brevo HTTP API over HTTPS, for hosts that block outbound SMTP). The active transport is logged at startup |
+| `BREVO_API_KEY` | Brevo API key, required with `MAIL_TRANSPORT=brevo` (the server refuses to start without it); never logged |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Outgoing mail (defaults: local Mailpit, no TLS, no login). `MAIL_FROM` (`Name <address>`) is also the Brevo sender. `SMTP_SECURE=true` = TLS from the start (465); otherwise STARTTLS when offered |
 | `MAIL_REDIRECT_TO` | Test environments only: every email goes to this address, body starts with `Original recipient: <name> <email>`; warning logged at startup. With `NODE_ENV=production` the server refuses to start |
 | `PUBLIC_APP_URL` | Public address of the site, used for every link in emails (`…/sign/<token>`). Read at startup (restart, no rebuild). The old name `APP_PUBLIC_URL` still works |
 | `CORS_ORIGIN` | Allowed browser origin(s), comma-separated, or `*` |
