@@ -3,7 +3,9 @@
 Next.js 15 (App Router) + TypeScript · Tailwind CSS 4 + shadcn/ui-style components · TanStack Query ·
 react-hook-form + zod · next-intl (Armenian default, English, Russian).
 
-The app talks to the backend **only through its REST API** (`NEXT_PUBLIC_API_URL`).
+The app talks to the backend **only through its REST API**, always on the site's own address: the browser calls
+relative `/api/*`, and Next.js proxies it to the backend (`rewrites` in `next.config.ts`). No API address is built
+into the bundle, so the same build works on any address.
 
 ## Run
 
@@ -30,10 +32,10 @@ npm run dev                 # http://localhost:3100 (hot reload)
 
 | Variable | Meaning |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Backend API **as seen from the browser**, e.g. `http://localhost:4000/api`. Inlined at build time. |
+| `BACKEND_URL` | Backend **as seen from the Next.js server** (target of the `/api` proxy), e.g. `http://localhost:4000`; `http://backend:4000` in Docker. Not the public address. |
 | `NEXT_PUBLIC_APP_ENV` | `development` / `test` / `production`. Demo logins on the login page are shown only when this is **not** `production`. |
 
-In Docker these are build arguments (`PUBLIC_API_URL`, `APP_ENV` in `docker-compose.yml`). For a production build:
+In Docker these are build arguments (`BACKEND_URL`, `APP_ENV` in `docker-compose.yml`). For a production build:
 `APP_ENV=production docker compose build frontend`.
 
 ## Demo logins

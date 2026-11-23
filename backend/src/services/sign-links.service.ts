@@ -25,7 +25,7 @@ export class SignLinksService {
   constructor(private readonly d: Pick<Deps, 'prisma' | 'clock' | 'config' | 'mailer' | 'core'>) {}
 
   linkFor(token: string) {
-    return `${this.d.config.APP_PUBLIC_URL.replace(/\/$/, '')}/sign/${token}`;
+    return `${this.d.config.PUBLIC_APP_URL.replace(/\/$/, '')}/sign/${token}`;
   }
 
   /** The newest request that is not revoked and not expired, or null. */
@@ -79,6 +79,7 @@ export class SignLinksService {
     };
     await this.d.mailer.send({
       to: doc.recipientEmail,
+      toName: doc.recipientName,
       subject: t(DEFAULT_LOCALE, `email.${kind}.subject`, params),
       text: t(DEFAULT_LOCALE, `email.${kind}.body`, params),
     });

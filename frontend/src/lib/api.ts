@@ -4,7 +4,7 @@
  * - turns `{ error: { code, message, details } }` responses into ApiError
  * - a 401 on an authenticated call clears the session (the app shell then redirects to /login)
  */
-import { API_URL } from './env';
+import { API_BASE } from './env';
 
 export class ApiError extends Error {
   constructor(
@@ -44,8 +44,10 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
+/** Absolute URL on the current origin (the site's own address), e.g. https://<site>/api/sign/…/pdf */
 export function apiUrl(path: string, query?: RequestOptions['query']) {
-  const url = new URL(API_URL + path);
+  const origin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
+  const url = new URL(API_BASE + path, origin);
   for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
   return url.toString();
 }

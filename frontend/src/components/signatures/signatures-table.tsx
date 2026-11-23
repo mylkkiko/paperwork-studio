@@ -29,6 +29,8 @@ interface Props {
  * S-4: recipient · status · document · template version · dates, with per-row actions.
  * Columns are ordered by importance (status right after the name); on phones the selection and recipient columns
  * stay pinned while the rest scrolls horizontally inside the card. The header row sticks while scrolling.
+ * On desktop (lg+) cells have slightly less padding and the e-mail / template sub-lines are a little narrower, so all
+ * columns (incl. actions) fit at 1440 px.
  */
 export function SignaturesTable({ rows, selected, onSelect, onRemind, onPaper, onView, onScan, remindingId }: Props) {
   const t = useTranslations('signatures');
@@ -37,7 +39,7 @@ export function SignaturesTable({ rows, selected, onSelect, onRemind, onPaper, o
   const allSelected = selectable.length > 0 && selectable.every((id) => selected.includes(id));
 
   return (
-    <Table containerClassName="md:max-h-[calc(100dvh-16rem)] md:overflow-y-auto">
+    <Table containerClassName="md:max-h-[calc(100dvh-16rem)] md:overflow-y-auto" className="lg:[&_td]:px-2 lg:[&_th]:px-2">
       <THead>
         <TR>
           <TH sticky className="w-11 pr-0">
@@ -68,7 +70,7 @@ export function SignaturesTable({ rows, selected, onSelect, onRemind, onPaper, o
             </TD>
             <TD sticky className="min-w-40 max-sm:left-11 max-sm:max-w-44 max-sm:shadow-[1px_0_0_var(--border)]">
               <div className="font-medium">{d.recipientName}</div>
-              <div className="max-w-48 truncate text-xs text-text-muted" title={d.recipientEmail ?? undefined}>
+              <div className="max-w-48 truncate text-xs text-text-muted lg:max-w-40" title={d.recipientEmail ?? undefined}>
                 {d.recipientEmail ?? '—'}
               </div>
             </TD>
@@ -79,7 +81,7 @@ export function SignaturesTable({ rows, selected, onSelect, onRemind, onPaper, o
               <button type="button" className="tabular whitespace-nowrap rounded-sm font-medium text-accent-text hover:underline" onClick={() => onView(d)}>
                 {d.number}
               </button>
-              <div className="max-w-40 truncate text-xs text-text-muted" title={d.template.title}>
+              <div className="max-w-40 truncate text-xs text-text-muted lg:max-w-32" title={d.template.title}>
                 {d.template.title}
               </div>
             </TD>

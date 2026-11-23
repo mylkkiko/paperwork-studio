@@ -113,3 +113,31 @@ test.describe('phone layout in hy / ru / en', () => {
     await setLanguage(page, 'hy');
   });
 });
+
+/** Desktop 1440 px: the signatures table (incl. the actions column) fits without horizontal scrolling. */
+test.describe('desktop 1440 px', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('the signatures table fits in hy / ru / en', async ({ page }) => {
+    const coord = await Api.as('coordinator');
+    const { templateId } = await (await Api.as('editor')).createPublishedTemplate(unique('E2E 1440 լայնություն'));
+    const docs = await coord.generate(templateId, ['stu-018', 'stu-019', 'stu-020']);
+    await coord.send([docs['stu-018'].id, docs['stu-019'].id]);
+    await coord.paperSign(docs['stu-019'].id); // a signed row with "View scan"
+    await loginAs(page, 'coordinator');
+    for (const locale of ['hy', 'ru', 'en'] as const) {
+      if (locale !== 'hy') await setLanguage(page, locale);
+      await page.goto(`/signatures?templateId=${templateId}`);
+      await expect(page.getByTestId('sig-row-stu-019').getByTestId('view-scan')).toBeVisible();
+      const fit = await page.evaluate(() => {
+        const t = document.querySelector('table')!;
+        return { table: t.scrollWidth, container: t.parentElement!.clientWidth };
+      });
+      expect({ locale, overflowPx: Math.max(0, fit.table - fit.container) }).toEqual({ locale, overflowPx: 0 });
+      // the actions column is fully inside the visible area
+      const actions = await page.getByTestId('sig-row-stu-018').getByTestId('upload-scan').boundingBox();
+      expect(actions!.x + actions!.width).toBeLessThanOrEqual(1440);
+    }
+    await setLanguage(page, 'hy');
+  });
+});

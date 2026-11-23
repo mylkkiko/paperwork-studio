@@ -5,10 +5,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# NEXT_PUBLIC_* values are inlined into the browser bundle at build time.
-ARG NEXT_PUBLIC_API_URL=http://localhost:4000/api
+# NEXT_PUBLIC_APP_ENV is inlined into the browser bundle at build time.
+# BACKEND_URL = the backend as seen from this container (internal docker address, not the public site address);
+# it is the target of the /api rewrite. The browser only ever uses relative /api on the site's own address.
 ARG NEXT_PUBLIC_APP_ENV=test
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_PUBLIC_APP_ENV=$NEXT_PUBLIC_APP_ENV
+ARG BACKEND_URL=http://backend:4000
+ENV NEXT_PUBLIC_APP_ENV=$NEXT_PUBLIC_APP_ENV BACKEND_URL=$BACKEND_URL
 RUN npm run build
 
 # ---- runtime: Next.js standalone server ----

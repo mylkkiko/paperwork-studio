@@ -1,4 +1,4 @@
-import { config } from './config';
+import { config, startupWarnings } from './config';
 import { createDeps } from './container';
 import { createServices } from './services';
 import { createApp } from './app';
@@ -7,6 +7,7 @@ import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
 
 async function main() {
+  for (const warning of startupWarnings(config)) logger.warn(warning);
   const queue = new BullGenerationQueue(config.REDIS_URL);
   const deps = createDeps(queue);
   const services = createServices(deps);

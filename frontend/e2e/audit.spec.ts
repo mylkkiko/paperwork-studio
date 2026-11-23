@@ -5,7 +5,7 @@
  * Sets up its own data through the API (works on any database state).
  */
 import { test, expect, type Page, type BrowserContext } from '@playwright/test';
-import { Api, expireLinks, linkFrom, unique, waitForMail } from './api';
+import { Api, API_URL, expireLinks, linkFrom, unique, waitForMail } from './api';
 import { loginAs } from './helpers';
 
 const DIR = `../docs/screenshots/${process.env.AUDIT_DIR ?? 'ui-v1-audit'}`;
@@ -34,7 +34,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     const expiredLink = await link('stu-003');
     const openLink = await link('stu-004');
     await coord.paperSign(docs['stu-001'].id); // signed = scan uploaded by the coordinator
-    await fetch(`http://localhost:4000/api${declineLink}/decline`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    await fetch(`${API_URL}${declineLink}/decline`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
     expireLinks(docs['stu-003'].id);
     await editor.call(`/templates/${templateId}/versions`, {
       form: (() => {

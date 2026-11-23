@@ -91,8 +91,9 @@ See [.env.example](.env.example) for defaults.
 | `JWT_SECRET`, `JWT_EXPIRES_IN` | Access-token signing key (≥ 16 chars) and lifetime (`8h`) |
 | `STORAGE_DIR` | Where templates, generated documents and scans are stored. Never served statically. |
 | `GOTENBERG_URL` | PDF converter |
-| `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM` | Outgoing mail (Mailpit in dev) |
-| `APP_PUBLIC_URL` | Frontend URL, used to build signing links in emails (`…/sign/<token>`) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Outgoing mail (defaults: local Mailpit, no TLS, no login). `SMTP_SECURE=true` = TLS from the start (465); otherwise STARTTLS when offered |
+| `MAIL_REDIRECT_TO` | Test environments only: every email goes to this address, body starts with `Original recipient: <name> <email>`; warning logged at startup. With `NODE_ENV=production` the server refuses to start |
+| `PUBLIC_APP_URL` | Public address of the site, used for every link in emails (`…/sign/<token>`). Read at startup (restart, no rebuild). The old name `APP_PUBLIC_URL` still works |
 | `CORS_ORIGIN` | Allowed browser origin(s), comma-separated, or `*` |
 | `APP_TIMEZONE` | Timezone for printed dates/times (`Asia/Yerevan`) |
 | `SIGN_LINK_TTL_DAYS` | Signing link lifetime (14) |

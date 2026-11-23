@@ -5,7 +5,8 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const API_URL = process.env.API_URL ?? 'http://localhost:4000/api';
+/** Setup calls go through the site's own /api proxy too (same path as the browser). */
+export const API_URL = process.env.API_URL ?? `${process.env.BASE_URL ?? 'http://localhost:3100'}/api`;
 export const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 export const GROUP = 'grp-web-2026-a';
 const SEED = join(__dirname, '..', '..', 'backend', 'seed', 'templates');

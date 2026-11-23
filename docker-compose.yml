@@ -1,4 +1,6 @@
 # One command: `docker compose up --build` starts the seeded demo: frontend on http://localhost:3100, API on :4000.
+# The browser reaches the API through the site itself (/api, proxied by Next.js), so only port 3100 needs to be public.
+# Settings come from a `.env` file next to this file (see .env.example); changing them needs a restart, not a rebuild.
 # Host ports avoid the defaults (5432, 6379, 3000) because they are often taken on dev machines.
 name: paperwork-studio
 
@@ -46,15 +48,20 @@ services:
       gotenberg: { condition: service_started }
       mailpit: { condition: service_started }
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 4000
       DATABASE_URL: postgresql://paperwork:paperwork@postgres:5432/paperwork?schema=public
       REDIS_URL: redis://redis:6379
       GOTENBERG_URL: http://gotenberg:3000
-      SMTP_HOST: mailpit
-      SMTP_PORT: 1025
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-Paperwork Studio <no-reply@academy.am>}
+      MAIL_REDIRECT_TO: ${MAIL_REDIRECT_TO:-}
       JWT_SECRET: ${JWT_SECRET:-demo-only-secret-change-me-please}
-      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3100}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:3100}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3100}
       STORAGE_DIR: /app/storage
       # Seed demo data on first start (idempotent: skipped if users already exist)
@@ -71,8 +78,8 @@ services:
     build:
       context: ./frontend
       args:
-        # Seen from the user's BROWSER, so it is the host URL of the backend, not the docker-internal one.
-        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:4000/api}
+        # Target of the /api proxy, seen from the frontend container (internal; not the public address).
+        BACKEND_URL: http://backend:4000
         # test = demo logins visible on the login page; set APP_ENV=production to hide them.
         NEXT_PUBLIC_APP_ENV: ${APP_ENV:-test}
     depends_on:

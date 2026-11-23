@@ -5,7 +5,7 @@
  * Output: docs/screenshots/paper-only/{light,dark}-{desktop,phone}-NN-name.png
  */
 import { test, expect } from '@playwright/test';
-import { Api, expireLinks, linkFrom, unique, waitForMail } from './api';
+import { Api, API_URL, expireLinks, linkFrom, unique, waitForMail } from './api';
 import { loginAs } from './helpers';
 
 const DIR = '../docs/screenshots/paper-only';
@@ -26,11 +26,11 @@ test.beforeAll(async () => {
   for (const [state, rid] of [['open', 'stu-001'], ['signed', 'stu-002'], ['declined', 'stu-003'], ['expired', 'stu-004']] as const) {
     links[state] = linkFrom((await waitForMail(docs[rid].recipientEmail, docs[rid].number)).text);
   }
-  await fetch(`http://localhost:4000/api/sign/${links.open.split('/').pop()}`); // "viewed"
+  await fetch(`${API_URL}/sign/${links.open.split('/').pop()}`); // "viewed"
   await coord.paperSign(docs['stu-002'].id);
-  await fetch(`http://localhost:4000/api${links.declined}/decline`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"reason":"Գումարը սխալ է"}' });
+  await fetch(`${API_URL}${links.declined}/decline`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"reason":"Գումարը սխալ է"}' });
   expireLinks(docs['stu-004'].id);
-  await fetch(`http://localhost:4000/api/sign/${links.expired.split('/').pop()}`); // marks it expired
+  await fetch(`${API_URL}/sign/${links.expired.split('/').pop()}`); // marks it expired
 });
 
 for (const theme of ['light', 'dark'] as const) {
