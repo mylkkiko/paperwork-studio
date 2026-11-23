@@ -1,5 +1,8 @@
 # Paperwork Studio
 
+<!-- Replace OWNER/REPO with the GitHub repository path once the repo is on GitHub. -->
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+
 Armenian document templates for the Academy: student agreements, termination acts, enrollment letters, vacation
 orders, partner invoices. Fill templates from the Core Engine, generate print-ready packs (PDF + Word) for a whole
 group, compare template versions clause by clause with a plain-language summary, and track who signed which version.
